@@ -3,36 +3,56 @@
 import { redirect } from 'react-router-dom';
 import { LoginCredentials, LoginResponse, LoginActionResult, BackendErrorMessage } from '../lib/types';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+let API_BASE_URL: string | undefined;
+
+switch (import.meta.env.VITE_APP_MODE) {
+  case 'vercel':
+    API_BASE_URL = import.meta.env.VITE_API_URL_VERCEL;
+    break;
+  case 'production':
+    API_BASE_URL = import.meta.env.VITE_API_URL_PROD;
+    break;
+  case 'dev':
+  default:
+    API_BASE_URL = import.meta.env.VITE_API_URL_DEV;
+    break;
+}
+
+if (!API_BASE_URL) {
+  console.error(`API_BASE_URL not defined for mode: ${import.meta.env.VITE_APP_MODE}. Check .env file.`);
+  API_BASE_URL = 'http://localhost:3001/api';
+}
+
 const TOKEN_STORAGE_KEY = 'jwtToken';
 
 function storeToken(token: string): void {
   localStorage.setItem(TOKEN_STORAGE_KEY, token);
 }
 
-function getToken(): string | null {
+export function getToken(): string | null {
   return localStorage.getItem(TOKEN_STORAGE_KEY);
 }
 
-function signout(): void {
+export function signout(): void {
   localStorage.removeItem(TOKEN_STORAGE_KEY);
-  console.log('User signed out.');
+  console.log('Auth: Signed out.');
 }
 
-function isAuthenticated(): boolean {
+export function isAuthenticated(): boolean {
   return getToken() !== null;
 }
 
-async function loginAction(credentials: LoginCredentials): Promise<LoginActionResult> {
+export async function loginAction(credentials: LoginCredentials): Promise<LoginActionResult> {
   const { username, password } = credentials;
 
-   if (!username || !password) {
-       console.error('Frontend validation failed: Username or password missing.');
-       return { error: 'Username and password are required.' };
-   }
+  if (!username || !password) {
+    return { error: 'Username and password are required.' };
+  }
+
+  const loginEndpoint = `${API_BASE_URL}/auth/login`;
 
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    const response = await fetch(loginEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -43,31 +63,29 @@ async function loginAction(credentials: LoginCredentials): Promise<LoginActionRe
       }),
     });
 
-    const result: LoginResponse | BackendErrorMessage = await response.json().catch(() => ({ message: 'Unknown response from server.' }));
+    const result: LoginResponse | BackendErrorMessage = await response.json().catch(() => ({ message: 'Unknown response.' }));
 
     if (!response.ok) {
       const errorResult = result as BackendErrorMessage;
-      console.error('Login failed:', response.status, response.statusText, errorResult.message);
+      console.error('Auth: Login failed', response.status, errorResult.message);
       return { error: errorResult.message || 'Login failed.' };
     }
 
     const successResult = result as LoginResponse;
-    console.log('Login successful!');
+    console.log('Auth: Login successful.');
     storeToken(successResult.token);
 
     return { success: true };
 
   } catch (error: any) {
-    console.error('Network or other error during login:', error);
-     return { error: 'There was a problem connecting to the server.' };
+    console.error('Auth: Login network error', error);
+    return { error: 'Connection error.' };
   }
 }
 
-function requireAuth(): void {
+export function requireAuth(): void {
   if (!isAuthenticated()) {
-    console.log('Authentication required. Redirecting to login.');
+    console.log('Auth: Auth required, redirecting.');
     throw redirect('/admin/login');
   }
 }
-
-export { loginAction, isAuthenticated, signout, requireAuth, getToken };

@@ -22,12 +22,12 @@ type EventCardProps = {
 
 function EventCard({ title, date, venue, location, image, ticketUrl }: EventCardProps) {
   return (
-    <div className="bg-black/40 rounded-lg overflow-hidden hover:bg-black/70 transition-all">
+    <div className="bg-black/40 border border-white/70 backdrop-blur-2xl rounded-lg overflow-hidden hover:bg-black/70 transition-all">
       <div className="h-48 overflow-hidden relative">
         <img src={image} alt={title} className="w-full h-full object-cover" />
         {ticketUrl && (
           <div className="absolute top-2 right-2">
-            <span className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">Tickets</span>
+            <span className="bg-white/30 backdrop-blur-4xl text-white text-xs font-bold px-2 py-1 rounded">Tickets</span>
           </div>
         )}
       </div>
@@ -43,7 +43,7 @@ function EventCard({ title, date, venue, location, image, ticketUrl }: EventCard
               href={ticketUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
+              className="bg-white/30 hover:bg-white/50 backdrop-blur-sm text-white px-3 py-2 rounded text-sm font-medium transition-colors"
             >
               Tickets kaufen
             </a>
