@@ -1,14 +1,14 @@
 // src/lib/events.ts
 
 import { redirect } from 'react-router-dom';
-import { Event, EventFormData, BackendErrorMessage } from '../lib/types';
+import { Event, EventFormData, BackendErrorMessage } from '../../types';
 import { getToken } from './auth';
 
 let API_BASE_URL: string | undefined;
 
 switch (import.meta.env.VITE_APP_MODE) {
-  case 'vite':
-    API_BASE_URL = import.meta.env.VITE_API_URL_VITE;
+  case 'vercel':
+    API_BASE_URL = import.meta.env.VITE_API_URL_VERCEL;
     break;
   case 'production':
     API_BASE_URL = import.meta.env.VITE_API_URL_PROD;
