@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { Home } from './pages/Home';
+import { ImprintPage } from './pages/ImprintPage';
+import { PrivacyPage } from './pages/PrivacyPage';
 import { Events } from './pages/Events';
 import { AdminEvents } from './pages/AdminEvents';
 import { EventForm } from './pages/EventForm';
@@ -18,6 +20,8 @@ function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
+          <Route path="imprint" element={<ImprintPage />} />
+          <Route path="privacy" element={<PrivacyPage />} />
           <Route path="events" element={<Events />} />
           
           {/* Login-Route */}
