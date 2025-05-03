@@ -64,20 +64,20 @@ export function Header() {
       {isDesktop && (
         <Dialog open={isMenuOpen} onOpenChange={(open) => !open && closeMenu()}>
           <DialogContent className="bg-black text-white border-zinc-700 p-8 max-w-md mx-auto rounded-lg">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3">
               <div className="shrink-0">
-                <Link to="/" className="text-xl uppercase font-semibold text-white" onClick={closeMenu}>
+                <Link to="/" className="text-xl uppercase font-[Dela_Gothic_One] font-semibold text-white hover:text-white/30" onClick={closeMenu}>
                   SCHUSTERJUNGE
                 </Link>
               </div>
             </div>
 
-            <div className="border-b border-zinc-700 mb-6"></div>
+            <div className="border-b border-zinc-700 mb-3"></div>
 
             <div className="flex flex-col space-y-6">
-               <Link to="/#media" className="text-3xl font-semibold" onClick={closeMenu}>Für Veranstalter</Link>
-               <Link to="/#link" className="text-3xl font-semibold" onClick={closeMenu}>Meine Links</Link>
-               <Link to="/events" className="text-3xl font-semibold" onClick={closeMenu}>Veranstaltungen</Link>
+               <Link to="/#media" className="text-3xl font-semibold hover:underline" onClick={closeMenu}>Für Veranstalter</Link>
+               <Link to="/#link" className="text-3xl font-semibold hover:underline" onClick={closeMenu}>Meine Links</Link>
+               <Link to="/events" className="text-3xl font-semibold hover:underline" onClick={closeMenu}>Veranstaltungen</Link>
             </div>
           </DialogContent>
         </Dialog>

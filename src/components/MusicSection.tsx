@@ -2,7 +2,7 @@ export function MusicSection() {
   return (
     <section id="music" className="py-16 px-8 bg-white/2 mx-auto">
       <div className="flex flex-col text-end">
-        <div className="leading-6 flex flex-col gap-4">
+        <div className="leading-6 flex flex-col gap-4 bg-['']">
           <span className="font-[Dela_Gothic_One] text-xs opacity-60 uppercase">Einfach für deine Veranstaltung buchen</span>
           <h1 className="font-[Dela_Gothic_One] text-4xl animate-fade-in-left delay-300">Der nächste Schritt</h1>
           <div className="text-shadow-white">
