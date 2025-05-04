@@ -1,10 +1,7 @@
-// src/components/Header.tsx
-
 import { X } from 'lucide-react';
 import { CgMenuRight } from "react-icons/cg";
 import { Link, useLocation } from 'react-router-dom';
 import { useMenuStore } from '../store/menuStore';
-import { useMediaQuery } from '../hooks/use-media-query';
 
 import {
   Dialog,
@@ -19,28 +16,23 @@ export function Header() {
   const location = useLocation();
   const isHomePage = location.pathname === '/';
 
-  const isDesktop = useMediaQuery('(min-width: 768px)');
-
-  const headerClasses = `fixed w-full top-0 z-50 transition-colors duration-300 ${
-    isHomePage ? 'bg-transparent' : 'bg-black shadow-md'
-  }`;
+  const headerClasses = `fixed w-full top-0 z-50 transition-colors duration-300 ${isHomePage ? 'bg-black/60 backdrop-blur-xs shadow-md' : 'bg-black shadow-md'}`;
 
   return (
     <nav className={headerClasses}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto px-4 sm:px-6 lg:px-5">
         <div className="flex items-center justify-between h-16">
 
           <div className="shrink-0">
-            <Link to="/" className="p-2 text-xl uppercase font-semibold text-white">
+            <Link to="/" className="p-2 text-xl uppercase font-semibold text-white hover:text-white/70 cursor-pointer">
               Schusterjunge
             </Link>
           </div>
 
-          {/* Menu button for all devices */}
           <div className="flex items-center">
             <button
               onClick={toggleMenu}
-              className="p-2 rounded-full hover-bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-white text-white"
+              className="p-2 rounded-full hover-bg-white/20 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-white text-white"
               aria-label="Toggle menu"
             >
               {isMenuOpen ? <X size={24} /> : <CgMenuRight size={24} />}
@@ -51,33 +43,21 @@ export function Header() {
 
       {/* Navigation */}
 
-      {!isDesktop && isMenuOpen && (
-        <div className="w-full bg-black/90 backdrop-blur-sm py-2">
-          <div className="px-2 pt-2 pb-3 space-y-1">
-            <Link to="/#media" className="block px-3 py-2 text-white hover-bg-zinc-700 rounded-md" onClick={closeMenu}>Für Veranstalter</Link>
-            <Link to="/#link" className="block px-3 py-2 text-white hover-bg-zinc-700 rounded-md" onClick={closeMenu}>Meine Links</Link>
-            <Link to="/events" className="block px-3 py-2 text-white hover-bg-zinc-700 rounded-md" onClick={closeMenu}>Veranstaltungen</Link>
-          </div>
-        </div>
-      )}
-
-      {isDesktop && (
+      {isMenuOpen && (
         <Dialog open={isMenuOpen} onOpenChange={(open) => !open && closeMenu()}>
-          <DialogContent className="bg-black text-white border-zinc-700 p-8 max-w-md mx-auto rounded-lg">
-            <div className="flex items-center justify-between mb-3">
+          <DialogContent className="bg-black/20 backdrop-blur-sm text-white border-zinc-700 p-8 max-w-md mx-auto rounded-lg">
+            <div className="flex items-center justify-between">
               <div className="shrink-0">
-                <Link to="/" className="text-xl uppercase font-[Dela_Gothic_One] font-semibold text-white hover:text-white/30" onClick={closeMenu}>
-                  SCHUSTERJUNGE
+                <Link to="/" className="text-2xl md:text-2xl lg:text-4xl font-semibold text-white" onClick={closeMenu}>
+                  Wohin soll's gehen?
                 </Link>
               </div>
             </div>
 
-            <div className="border-b border-zinc-700 mb-3"></div>
-
-            <div className="flex flex-col space-y-6">
-               <Link to="/#media" className="text-3xl font-semibold hover:underline" onClick={closeMenu}>Für Veranstalter</Link>
-               <Link to="/#link" className="text-3xl font-semibold hover:underline" onClick={closeMenu}>Meine Links</Link>
-               <Link to="/events" className="text-3xl font-semibold hover:underline" onClick={closeMenu}>Veranstaltungen</Link>
+            <div className="flex mt-2 flex-col space-y-6 text-white/90">
+            <Link to="/events" className="text-xl md:text-2xl font-medium hover:underline" onClick={closeMenu}>Veranstaltungen</Link>
+              <Link to="/kit" className="text-xl md:text-2xl hover:underline" onClick={closeMenu}>Presse-Kit für Veranstalter</Link>
+              {/* <Link to="/#link" className="text-2xl font-medium hover:underline" onClick={closeMenu}>Meine Links</Link> */}
             </div>
           </DialogContent>
         </Dialog>
