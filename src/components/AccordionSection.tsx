@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
-import { FaHistory, FaChartLine, FaCalendarAlt } from "react-icons/fa";
+import { FaCalendarAlt } from "react-icons/fa";
 import { TrackChip } from './TrackChip';
 
 interface Track {

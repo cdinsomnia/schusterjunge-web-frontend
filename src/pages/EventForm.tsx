@@ -13,6 +13,8 @@ export function EventForm() {
   const [formData, setFormData] = useState<EventFormData>({
     title: '',
     date: '',
+    endDate: '',
+    startTime: '',
     description: null,
     venue: null,
     location: null,
@@ -40,6 +42,8 @@ export function EventForm() {
             ...prev,
             title: event.title,
             date: event.date ? new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(event.date)) : '',
+            endDate: event.endDate ? new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(event.endDate)) : '',
+            startTime: event.startTime ? new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' }).format(new Date(event.startTime)) : '',
             description: event.description,
             venue: event.venue,
             location: event.location,
@@ -71,35 +75,62 @@ export function EventForm() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    if (name === 'date' || name === 'endDate') {
+      // Konvertiere das Datum in das deutsche Format
+      const date = new Date(value);
+      const formattedDate = date.toLocaleDateString('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      setFormData(prev => ({
+        ...prev,
+        [name]: formattedDate
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Convert date from DD.MM.YYYY to YYYY-MM-DD
+    // Konvertiere die Daten vom deutschen Format (DD.MM.YYYY) zu ISO-Format (YYYY-MM-DD)
     let dataToSend = { ...formData };
     if (dataToSend.date) {
       const [day, month, year] = dataToSend.date.split('.');
       dataToSend.date = `${year}-${month}-${day}`;
+    }
+    if (dataToSend.endDate) {
+      const [day, month, year] = dataToSend.endDate.split('.');
+      dataToSend.endDate = `${year}-${month}-${day}`;
     }
 
     try {
       let result;
       if (isEditMode && id) {
         result = await updateEvent(id, dataToSend);
-        showMessage('Event successfully updated', 'success');
+        showMessage('Event erfolgreich aktualisiert', 'success');
         navigate('/admin/events');
       } else {
         result = await createEvent(dataToSend);
-        showMessage('Event successfully created', 'success');
+        showMessage('Event erfolgreich erstellt', 'success');
         if (!isEditMode) {
           setFormData({
-            title: '', date: '', description: null, venue: null, location: null, imageUrl: null, ticketUrl: null
+            title: '', 
+            date: '', 
+            endDate: '',
+            startTime: '',
+            description: null, 
+            venue: null, 
+            location: null, 
+            imageUrl: null, 
+            ticketUrl: null
           });
         }
         navigate('/admin/events');
@@ -110,7 +141,7 @@ export function EventForm() {
         navigate('/admin/login');
       } else {
         const errorMessage = (error instanceof Error ? error.message : 'Unknown error saving.');
-        showMessage(`Error saving event: ${errorMessage}`, 'error');
+        showMessage(`Fehler beim Speichern des Events: ${errorMessage}`, 'error');
         setIsLoading(false);
       }
     }
@@ -185,14 +216,14 @@ export function EventForm() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label htmlFor="date" className="block text-sm font-medium mb-2">
-                Datum
+                Startdatum
               </label>
               <div className="relative">
                 <input
                   type="date"
                   id="date"
                   name="date"
-                  value={formData.date}
+                  value={formData.date ? new Date(formData.date.split('.').reverse().join('-')).toISOString().split('T')[0] : ''}
                   onChange={handleChange}
                   required
                   className="w-full px-4 py-3 bg-zinc-900/50 border border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
@@ -202,21 +233,38 @@ export function EventForm() {
             </div>
 
             <div>
-              <label htmlFor="time" className="block text-sm font-medium mb-2">
-                Uhrzeit
+              <label htmlFor="endDate" className="block text-sm font-medium mb-2">
+                Enddatum
               </label>
               <div className="relative">
                 <input
-                  type="time"
-                  id="time"
-                  name="time"
-                  value={formData.time}
+                  type="date"
+                  id="endDate"
+                  name="endDate"
+                  value={formData.endDate ? new Date(formData.endDate.split('.').reverse().join('-')).toISOString().split('T')[0] : ''}
                   onChange={handleChange}
-                  required
+                  min={formData.date ? new Date(formData.date.split('.').reverse().join('-')).toISOString().split('T')[0] : undefined}
                   className="w-full px-4 py-3 bg-zinc-900/50 border border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
                 />
-                <FaClock className="absolute right-4 top-1/2 transform -translate-y-1/2 text-zinc-500" />
+                <FaCalendarAlt className="absolute right-4 top-1/2 transform -translate-y-1/2 text-zinc-500" />
               </div>
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="startTime" className="block text-sm font-medium mb-2">
+              Startzeit
+            </label>
+            <div className="relative">
+              <input
+                type="time"
+                id="startTime"
+                name="startTime"
+                value={formData.startTime}
+                onChange={handleChange}
+                className="w-full px-4 py-3 bg-zinc-900/50 border border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
+              />
+              <FaClock className="absolute right-4 top-1/2 transform -translate-y-1/2 text-zinc-500" />
             </div>
           </div>
 
