@@ -144,9 +144,9 @@ export async function createEvent(eventData: EventFormData): Promise<Event> {
 
     const dataToSend = {
         ...eventData,
-        date: eventData.date ? formatDateForServer(eventData.date) : null,
-        endDate: eventData.endDate ? formatDateForServer(eventData.endDate) : null,
-        startTime: eventData.startTime ? formatTimeForServer(eventData.startTime) : null
+        date: eventData.date ? convertGermanToISODate(eventData.date) : null,
+        endDate: eventData.endDate ? convertGermanToISODate(eventData.endDate) : null,
+        startTime: eventData.startTime || null
     };
 
     const endpoint = `${API_BASE_URL}/events`;
@@ -173,13 +173,10 @@ export async function createEvent(eventData: EventFormData): Promise<Event> {
         try {
             const createdEvent: Event = await authCheckedResponse.json();
             if (createdEvent.date) {
-                createdEvent.date = formatDateForDisplay(createdEvent.date);
+                createdEvent.date = convertISOToGermanDate(createdEvent.date);
             }
             if (createdEvent.endDate) {
-                createdEvent.endDate = formatDateForDisplay(createdEvent.endDate);
-            }
-            if (createdEvent.startTime) {
-                createdEvent.startTime = formatTimeForDisplay(createdEvent.startTime);
+                createdEvent.endDate = convertISOToGermanDate(createdEvent.endDate);
             }
             console.log('Events: Event created successfully.', createdEvent);
             return createdEvent;
@@ -204,9 +201,9 @@ export async function updateEvent(id: number | string, updates: Partial<EventFor
 
     const dataToSend = {
         ...updates,
-        date: updates.date ? formatDateForServer(updates.date) : undefined,
-        endDate: updates.endDate ? formatDateForServer(updates.endDate) : undefined,
-        startTime: updates.startTime ? formatTimeForServer(updates.startTime) : undefined
+        date: updates.date ? convertGermanToISODate(updates.date) : undefined,
+        endDate: updates.endDate ? convertGermanToISODate(updates.endDate) : undefined,
+        startTime: updates.startTime || undefined
     };
 
     const endpoint = `${API_BASE_URL}/events/${id}`;
@@ -233,13 +230,10 @@ export async function updateEvent(id: number | string, updates: Partial<EventFor
         try {
             const updatedEvent: Event = await authCheckedResponse.json();
             if (updatedEvent.date) {
-                updatedEvent.date = formatDateForDisplay(updatedEvent.date);
+                updatedEvent.date = convertISOToGermanDate(updatedEvent.date);
             }
             if (updatedEvent.endDate) {
-                updatedEvent.endDate = formatDateForDisplay(updatedEvent.endDate);
-            }
-            if (updatedEvent.startTime) {
-                updatedEvent.startTime = formatTimeForDisplay(updatedEvent.startTime);
+                updatedEvent.endDate = convertISOToGermanDate(updatedEvent.endDate);
             }
             console.log(`Events: Event ${id} updated successfully.`, updatedEvent);
             return updatedEvent;
@@ -295,45 +289,12 @@ export async function deleteEvent(id: number | string): Promise<{ success: true,
     }
 }
 
-function formatDateForServer(dateStr: string): string {
-    try {
-        const [day, month, year] = dateStr.split('.');
-        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-        return date.toISOString().split('T')[0];
-    } catch (error) {
-        console.error('Error formatting date for server:', error);
-        return dateStr;
-    }
+function convertGermanToISODate(germanDate: string): string {
+    const [day, month, year] = germanDate.split('.');
+    return `${year}-${month}-${day}`;
 }
 
-function formatDateForDisplay(dateStr: string): string {
-    try {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('de-DE');
-    } catch (error) {
-        console.error('Error formatting date for display:', error);
-        return dateStr;
-    }
-}
-
-function formatTimeForServer(timeStr: string): string {
-    try {
-        const [hours, minutes] = timeStr.split(':');
-        const date = new Date();
-        date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-        return date.toISOString();
-    } catch (error) {
-        console.error('Error formatting time for server:', error);
-        return timeStr;
-    }
-}
-
-function formatTimeForDisplay(timeStr: string): string {
-    try {
-        const date = new Date(timeStr);
-        return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-    } catch (error) {
-        console.error('Error formatting time for display:', error);
-        return timeStr;
-    }
+function convertISOToGermanDate(isoDate: string): string {
+    const [year, month, day] = isoDate.split('T')[0].split('-');
+    return `${day}.${month}.${year}`;
 }
