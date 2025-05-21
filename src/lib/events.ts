@@ -144,9 +144,9 @@ export async function createEvent(eventData: EventFormData): Promise<Event> {
 
     const dataToSend = {
         ...eventData,
-        date: eventData.date ? new Date(eventData.date.split('.').reverse().join('-')).toISOString() : null,
-        endDate: eventData.endDate ? new Date(eventData.endDate.split('.').reverse().join('-')).toISOString() : null,
-        startTime: eventData.startTime ? new Date(`1970-01-01T${eventData.startTime}`).toISOString() : null
+        date: eventData.date ? formatDateForServer(eventData.date) : null,
+        endDate: eventData.endDate ? formatDateForServer(eventData.endDate) : null,
+        startTime: eventData.startTime ? formatTimeForServer(eventData.startTime) : null
     };
 
     const endpoint = `${API_BASE_URL}/events`;
@@ -173,13 +173,13 @@ export async function createEvent(eventData: EventFormData): Promise<Event> {
         try {
             const createdEvent: Event = await authCheckedResponse.json();
             if (createdEvent.date) {
-                createdEvent.date = new Date(createdEvent.date).toLocaleDateString('de-DE');
+                createdEvent.date = formatDateForDisplay(createdEvent.date);
             }
             if (createdEvent.endDate) {
-                createdEvent.endDate = new Date(createdEvent.endDate).toLocaleDateString('de-DE');
+                createdEvent.endDate = formatDateForDisplay(createdEvent.endDate);
             }
             if (createdEvent.startTime) {
-                createdEvent.startTime = new Date(createdEvent.startTime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                createdEvent.startTime = formatTimeForDisplay(createdEvent.startTime);
             }
             console.log('Events: Event created successfully.', createdEvent);
             return createdEvent;
@@ -204,9 +204,9 @@ export async function updateEvent(id: number | string, updates: Partial<EventFor
 
     const dataToSend = {
         ...updates,
-        date: updates.date ? new Date(updates.date.split('.').reverse().join('-')).toISOString() : undefined,
-        endDate: updates.endDate ? new Date(updates.endDate.split('.').reverse().join('-')).toISOString() : undefined,
-        startTime: updates.startTime ? new Date(`1970-01-01T${updates.startTime}`).toISOString() : undefined
+        date: updates.date ? formatDateForServer(updates.date) : undefined,
+        endDate: updates.endDate ? formatDateForServer(updates.endDate) : undefined,
+        startTime: updates.startTime ? formatTimeForServer(updates.startTime) : undefined
     };
 
     const endpoint = `${API_BASE_URL}/events/${id}`;
@@ -233,13 +233,13 @@ export async function updateEvent(id: number | string, updates: Partial<EventFor
         try {
             const updatedEvent: Event = await authCheckedResponse.json();
             if (updatedEvent.date) {
-                updatedEvent.date = new Date(updatedEvent.date).toLocaleDateString('de-DE');
+                updatedEvent.date = formatDateForDisplay(updatedEvent.date);
             }
             if (updatedEvent.endDate) {
-                updatedEvent.endDate = new Date(updatedEvent.endDate).toLocaleDateString('de-DE');
+                updatedEvent.endDate = formatDateForDisplay(updatedEvent.endDate);
             }
             if (updatedEvent.startTime) {
-                updatedEvent.startTime = new Date(updatedEvent.startTime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                updatedEvent.startTime = formatTimeForDisplay(updatedEvent.startTime);
             }
             console.log(`Events: Event ${id} updated successfully.`, updatedEvent);
             return updatedEvent;
@@ -292,5 +292,48 @@ export async function deleteEvent(id: number | string): Promise<{ success: true,
     } catch (error: any) {
          console.error(`Events: Catching error in deleteEvent ${id}:`, error);
         throw error;
+    }
+}
+
+function formatDateForServer(dateStr: string): string {
+    try {
+        const [day, month, year] = dateStr.split('.');
+        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        return date.toISOString().split('T')[0];
+    } catch (error) {
+        console.error('Error formatting date for server:', error);
+        return dateStr;
+    }
+}
+
+function formatDateForDisplay(dateStr: string): string {
+    try {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('de-DE');
+    } catch (error) {
+        console.error('Error formatting date for display:', error);
+        return dateStr;
+    }
+}
+
+function formatTimeForServer(timeStr: string): string {
+    try {
+        const [hours, minutes] = timeStr.split(':');
+        const date = new Date();
+        date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        return date.toISOString();
+    } catch (error) {
+        console.error('Error formatting time for server:', error);
+        return timeStr;
+    }
+}
+
+function formatTimeForDisplay(timeStr: string): string {
+    try {
+        const date = new Date(timeStr);
+        return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    } catch (error) {
+        console.error('Error formatting time for display:', error);
+        return timeStr;
     }
 }
