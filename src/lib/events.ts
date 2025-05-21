@@ -144,9 +144,9 @@ export async function createEvent(eventData: EventFormData): Promise<Event> {
 
     const dataToSend = {
         ...eventData,
-        date: eventData.date ? convertGermanToISODate(eventData.date) : null,
-        endDate: eventData.endDate ? convertGermanToISODate(eventData.endDate) : null,
-        startTime: eventData.startTime || null
+        date: eventData.date ? new Date(eventData.date.split('.').reverse().join('-')).toISOString() : null,
+        endDate: eventData.endDate ? new Date(eventData.endDate.split('.').reverse().join('-')).toISOString() : null,
+        startTime: eventData.startTime ? new Date(`1970-01-01T${eventData.startTime}`).toISOString() : null
     };
 
     const endpoint = `${API_BASE_URL}/events`;
@@ -173,10 +173,13 @@ export async function createEvent(eventData: EventFormData): Promise<Event> {
         try {
             const createdEvent: Event = await authCheckedResponse.json();
             if (createdEvent.date) {
-                createdEvent.date = convertISOToGermanDate(createdEvent.date);
+                createdEvent.date = new Date(createdEvent.date).toLocaleDateString('de-DE');
             }
             if (createdEvent.endDate) {
-                createdEvent.endDate = convertISOToGermanDate(createdEvent.endDate);
+                createdEvent.endDate = new Date(createdEvent.endDate).toLocaleDateString('de-DE');
+            }
+            if (createdEvent.startTime) {
+                createdEvent.startTime = new Date(createdEvent.startTime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             }
             console.log('Events: Event created successfully.', createdEvent);
             return createdEvent;
@@ -201,9 +204,9 @@ export async function updateEvent(id: number | string, updates: Partial<EventFor
 
     const dataToSend = {
         ...updates,
-        date: updates.date ? convertGermanToISODate(updates.date) : undefined,
-        endDate: updates.endDate ? convertGermanToISODate(updates.endDate) : undefined,
-        startTime: updates.startTime || undefined
+        date: updates.date ? new Date(updates.date.split('.').reverse().join('-')).toISOString() : undefined,
+        endDate: updates.endDate ? new Date(updates.endDate.split('.').reverse().join('-')).toISOString() : undefined,
+        startTime: updates.startTime ? new Date(`1970-01-01T${updates.startTime}`).toISOString() : undefined
     };
 
     const endpoint = `${API_BASE_URL}/events/${id}`;
@@ -230,10 +233,13 @@ export async function updateEvent(id: number | string, updates: Partial<EventFor
         try {
             const updatedEvent: Event = await authCheckedResponse.json();
             if (updatedEvent.date) {
-                updatedEvent.date = convertISOToGermanDate(updatedEvent.date);
+                updatedEvent.date = new Date(updatedEvent.date).toLocaleDateString('de-DE');
             }
             if (updatedEvent.endDate) {
-                updatedEvent.endDate = convertISOToGermanDate(updatedEvent.endDate);
+                updatedEvent.endDate = new Date(updatedEvent.endDate).toLocaleDateString('de-DE');
+            }
+            if (updatedEvent.startTime) {
+                updatedEvent.startTime = new Date(updatedEvent.startTime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             }
             console.log(`Events: Event ${id} updated successfully.`, updatedEvent);
             return updatedEvent;
@@ -287,14 +293,4 @@ export async function deleteEvent(id: number | string): Promise<{ success: true,
          console.error(`Events: Catching error in deleteEvent ${id}:`, error);
         throw error;
     }
-}
-
-function convertGermanToISODate(germanDate: string): string {
-    const [day, month, year] = germanDate.split('.');
-    return `${year}-${month}-${day}`;
-}
-
-function convertISOToGermanDate(isoDate: string): string {
-    const [year, month, day] = isoDate.split('T')[0].split('-');
-    return `${day}.${month}.${year}`;
 }

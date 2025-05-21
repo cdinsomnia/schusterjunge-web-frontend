@@ -4,6 +4,12 @@ import { getEvent, createEvent, updateEvent } from '../lib/events';
 import { EventFormData } from '../lib/types';
 import { motion } from 'framer-motion';
 import { FaCalendarAlt, FaBuilding, FaMapMarkerAlt, FaClock, FaInfoCircle } from 'react-icons/fa';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
+import { registerLocale } from 'react-datepicker';
+import { de } from 'date-fns/locale/de';
+
+registerLocale('de', de);
 
 export function EventForm() {
   const { id } = useParams<{ id: string }>();
@@ -13,14 +19,18 @@ export function EventForm() {
   const [formData, setFormData] = useState<EventFormData>({
     title: '',
     date: '',
-    endDate: '',
-    startTime: '',
+    endDate: null,
+    startTime: null,
     description: null,
     venue: null,
     location: null,
     imageUrl: null,
     ticketUrl: null
   });
+
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
+  const [selectedTime, setSelectedTime] = useState<Date | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(isEditMode);
@@ -41,15 +51,30 @@ export function EventForm() {
           setFormData(prev => ({
             ...prev,
             title: event.title,
-            date: event.date ? new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(event.date)) : '',
-            endDate: event.endDate ? new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(event.endDate)) : '',
-            startTime: event.startTime ? new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' }).format(new Date(event.startTime)) : '',
+            date: event.date,
+            endDate: event.endDate,
+            startTime: event.startTime,
             description: event.description,
             venue: event.venue,
             location: event.location,
             imageUrl: event.imageUrl,
             ticketUrl: event.ticketUrl,
           }));
+
+          // Setze die Datepicker-Werte
+          if (event.date) {
+            setSelectedDate(new Date(event.date));
+          }
+          if (event.endDate) {
+            setSelectedEndDate(new Date(event.endDate));
+          }
+          if (event.startTime) {
+            const [hours, minutes] = event.startTime.split(':');
+            const timeDate = new Date();
+            timeDate.setHours(parseInt(hours), parseInt(minutes));
+            setSelectedTime(timeDate);
+          }
+
           setIsLoading(false);
           setInitialLoading(false);
         } else {
@@ -75,23 +100,38 @@ export function EventForm() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
-    if (name === 'date' || name === 'endDate') {
-      // Konvertiere das Datum in das deutsche Format
-      const date = new Date(value);
-      const formattedDate = date.toLocaleDateString('de-DE', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleDateChange = (date: Date | null, isEndDate: boolean = false) => {
+    if (date) {
+      if (isEndDate) {
+        setSelectedEndDate(date);
+        setFormData(prev => ({
+          ...prev,
+          endDate: date.toISOString()
+        }));
+      } else {
+        setSelectedDate(date);
+        setFormData(prev => ({
+          ...prev,
+          date: date.toISOString()
+        }));
+      }
+    }
+  };
+
+  const handleTimeChange = (time: Date | null) => {
+    if (time) {
+      setSelectedTime(time);
+      const hours = time.getHours().toString().padStart(2, '0');
+      const minutes = time.getMinutes().toString().padStart(2, '0');
       setFormData(prev => ({
         ...prev,
-        [name]: formattedDate
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
+        startTime: `${hours}:${minutes}`
       }));
     }
   };
@@ -100,38 +140,30 @@ export function EventForm() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Konvertiere die Daten vom deutschen Format (DD.MM.YYYY) zu ISO-Format (YYYY-MM-DD)
-    let dataToSend = { ...formData };
-    if (dataToSend.date) {
-      const [day, month, year] = dataToSend.date.split('.');
-      dataToSend.date = `${year}-${month}-${day}`;
-    }
-    if (dataToSend.endDate) {
-      const [day, month, year] = dataToSend.endDate.split('.');
-      dataToSend.endDate = `${year}-${month}-${day}`;
-    }
-
     try {
       let result;
       if (isEditMode && id) {
-        result = await updateEvent(id, dataToSend);
+        result = await updateEvent(id, formData);
         showMessage('Event erfolgreich aktualisiert', 'success');
         navigate('/admin/events');
       } else {
-        result = await createEvent(dataToSend);
+        result = await createEvent(formData);
         showMessage('Event erfolgreich erstellt', 'success');
         if (!isEditMode) {
           setFormData({
             title: '', 
             date: '', 
-            endDate: '',
-            startTime: '',
+            endDate: null,
+            startTime: null,
             description: null, 
             venue: null, 
             location: null, 
             imageUrl: null, 
             ticketUrl: null
           });
+          setSelectedDate(null);
+          setSelectedEndDate(null);
+          setSelectedTime(null);
         }
         navigate('/admin/events');
       }
@@ -175,19 +207,13 @@ export function EventForm() {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-green-600/20 border border-green-600/40 text-green-400 p-4 rounded-lg mb-6"
+            className={`${
+              message.type === 'success' 
+                ? 'bg-green-600/20 border-green-600/40 text-green-400' 
+                : 'bg-red-600/20 border-red-600/40 text-red-400'
+            } p-4 rounded-lg mb-6 border`}
           >
             {message.text}
-          </motion.div>
-        )}
-
-        {loadError && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-lg mb-6"
-          >
-            {loadError}
           </motion.div>
         )}
 
@@ -219,16 +245,16 @@ export function EventForm() {
                 Startdatum
               </label>
               <div className="relative">
-                <input
-                  type="date"
-                  id="date"
-                  name="date"
-                  value={formData.date ? new Date(formData.date.split('.').reverse().join('-')).toISOString().split('T')[0] : ''}
-                  onChange={handleChange}
+                <DatePicker
+                  selected={selectedDate}
+                  onChange={(date) => handleDateChange(date)}
+                  dateFormat="dd.MM.yyyy"
+                  locale="de"
                   required
                   className="w-full px-4 py-3 bg-zinc-900/50 border border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
+                  placeholderText="TT.MM.JJJJ"
                 />
-                <FaCalendarAlt className="absolute right-4 top-1/2 transform -translate-y-1/2 text-zinc-500" />
+                <FaCalendarAlt className="absolute right-4 top-1/2 transform -translate-y-1/2 text-zinc-500 pointer-events-none" />
               </div>
             </div>
 
@@ -237,16 +263,16 @@ export function EventForm() {
                 Enddatum
               </label>
               <div className="relative">
-                <input
-                  type="date"
-                  id="endDate"
-                  name="endDate"
-                  value={formData.endDate ? new Date(formData.endDate.split('.').reverse().join('-')).toISOString().split('T')[0] : ''}
-                  onChange={handleChange}
-                  min={formData.date ? new Date(formData.date.split('.').reverse().join('-')).toISOString().split('T')[0] : undefined}
+                <DatePicker
+                  selected={selectedEndDate}
+                  onChange={(date) => handleDateChange(date, true)}
+                  dateFormat="dd.MM.yyyy"
+                  locale="de"
+                  minDate={selectedDate || undefined}
                   className="w-full px-4 py-3 bg-zinc-900/50 border border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
+                  placeholderText="TT.MM.JJJJ"
                 />
-                <FaCalendarAlt className="absolute right-4 top-1/2 transform -translate-y-1/2 text-zinc-500" />
+                <FaCalendarAlt className="absolute right-4 top-1/2 transform -translate-y-1/2 text-zinc-500 pointer-events-none" />
               </div>
             </div>
           </div>
@@ -256,15 +282,19 @@ export function EventForm() {
               Startzeit
             </label>
             <div className="relative">
-              <input
-                type="time"
-                id="startTime"
-                name="startTime"
-                value={formData.startTime}
-                onChange={handleChange}
+              <DatePicker
+                selected={selectedTime}
+                onChange={handleTimeChange}
+                showTimeSelect
+                showTimeSelectOnly
+                timeIntervals={15}
+                timeCaption="Zeit"
+                dateFormat="HH:mm"
+                locale="de"
                 className="w-full px-4 py-3 bg-zinc-900/50 border border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
+                placeholderText="HH:mm"
               />
-              <FaClock className="absolute right-4 top-1/2 transform -translate-y-1/2 text-zinc-500" />
+              <FaClock className="absolute right-4 top-1/2 transform -translate-y-1/2 text-zinc-500 pointer-events-none" />
             </div>
           </div>
 

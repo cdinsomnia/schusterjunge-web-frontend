@@ -3,9 +3,9 @@
 export interface Event {
   id: number;
   title: string;
-  date: string;
-  endDate: string | null;
-  startTime: string | null;
+  date: string;  // ISO Date String
+  endDate: string | null;  // ISO Date String
+  startTime: string | null;  // HH:mm format
   description: string | null;
   venue: string | null;
   location: string | null;
@@ -18,9 +18,9 @@ export interface Event {
 export type EventFormData = Omit<Event, 'id' | 'createdAt' | 'updatedAt' | 'description' | 'venue' | 'location' | 'imageUrl' | 'ticketUrl' | 'endDate' | 'startTime'> & {
   id?: number;
   title: string;
-  date: string;
-  endDate?: string | null;
-  startTime?: string | null;
+  date: string;  // ISO Date String
+  endDate?: string | null;  // ISO Date String
+  startTime?: string | null;  // HH:mm format
   description?: string | null;
   venue?: string | null;
   location?: string | null;
