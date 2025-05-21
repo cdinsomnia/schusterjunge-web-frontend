@@ -8,6 +8,7 @@ import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { registerLocale } from 'react-datepicker';
 import { de } from 'date-fns/locale/de';
+import { format, parseISO } from 'date-fns';
 
 registerLocale('de', de);
 
@@ -48,58 +49,84 @@ export function EventForm() {
         const event = await getEvent(id);
 
         if (event) {
+          // Datum verarbeiten
           if (event.date) {
-            const date = new Date(event.date);
-            if (!isNaN(date.getTime())) {
-              setSelectedDate(date);
-            }
-          }
-          if (event.endDate) {
-            const date = new Date(event.endDate);
-            if (!isNaN(date.getTime())) {
-              setSelectedEndDate(date);
-            }
-          }
-          if (event.startTime) {
-            const [hours, minutes] = event.startTime.includes('T')
-              ? event.startTime.split('T')[1].split(':')
-              : event.startTime.split(':');
-            const timeDate = new Date();
-            timeDate.setHours(parseInt(hours), parseInt(minutes));
-            if (!isNaN(timeDate.getTime())) {
-              setSelectedTime(timeDate);
+            try {
+              const date = parseISO(event.date);
+              if (!isNaN(date.getTime())) {
+                setSelectedDate(date);
+                setFormData(prev => ({
+                  ...prev,
+                  date: format(date, 'yyyy-MM-dd')
+                }));
+              }
+            } catch (error) {
+              console.error('Fehler beim Parsen des Datums:', error);
             }
           }
 
-          setFormData({
+          // Enddatum verarbeiten
+          if (event.endDate) {
+            try {
+              const endDate = parseISO(event.endDate);
+              if (!isNaN(endDate.getTime())) {
+                setSelectedEndDate(endDate);
+                setFormData(prev => ({
+                  ...prev,
+                  endDate: format(endDate, 'yyyy-MM-dd')
+                }));
+              }
+            } catch (error) {
+              console.error('Fehler beim Parsen des Enddatums:', error);
+            }
+          }
+
+          // Startzeit verarbeiten
+          if (event.startTime) {
+            try {
+              const [hours, minutes] = event.startTime.split(':');
+              const timeDate = new Date();
+              timeDate.setHours(parseInt(hours), parseInt(minutes));
+              if (!isNaN(timeDate.getTime())) {
+                setSelectedTime(timeDate);
+                setFormData(prev => ({
+                  ...prev,
+                  startTime: event.startTime
+                }));
+              }
+            } catch (error) {
+              console.error('Fehler beim Parsen der Startzeit:', error);
+            }
+          }
+
+          // Restliche Formulardaten setzen
+          setFormData(prev => ({
+            ...prev,
             title: event.title,
-            date: event.date,
-            endDate: event.endDate,
-            startTime: event.startTime,
             description: event.description,
             venue: event.venue,
             location: event.location,
             imageUrl: event.imageUrl,
             ticketUrl: event.ticketUrl,
-          });
+          }));
 
           setIsLoading(false);
           setInitialLoading(false);
         } else {
-          console.warn(`Event with ID ${id} not found.`);
+          console.warn(`Event mit ID ${id} nicht gefunden.`);
           navigate('/admin/events');
           setIsLoading(false);
           setInitialLoading(false);
         }
       } catch (error: any) {
-        console.error('Error loading event for edit:', error);
+        console.error('Fehler beim Laden des Events:', error);
         if (error instanceof Response && error.status === 401) {
           showMessage('Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.', 'error');
           setTimeout(() => {
             navigate('/admin/login');
           }, 2000);
         } else {
-          setLoadError('Error loading event data.');
+          setLoadError('Fehler beim Laden der Eventdaten.');
           setIsLoading(false);
           setInitialLoading(false);
         }
@@ -123,13 +150,13 @@ export function EventForm() {
         setSelectedEndDate(date);
         setFormData(prev => ({
           ...prev,
-          endDate: date.toISOString().split('T')[0]
+          endDate: format(date, 'yyyy-MM-dd')
         }));
       } else {
         setSelectedDate(date);
         setFormData(prev => ({
           ...prev,
-          date: date.toISOString().split('T')[0]
+          date: format(date, 'yyyy-MM-dd')
         }));
       }
     } else {
@@ -152,11 +179,10 @@ export function EventForm() {
   const handleTimeChange = (time: Date | null) => {
     if (time && !isNaN(time.getTime())) {
       setSelectedTime(time);
-      const hours = time.getHours().toString().padStart(2, '0');
-      const minutes = time.getMinutes().toString().padStart(2, '0');
+      const formattedTime = format(time, 'HH:mm');
       setFormData(prev => ({
         ...prev,
-        startTime: `${hours}:${minutes}`
+        startTime: formattedTime
       }));
     } else {
       setSelectedTime(null);
@@ -172,24 +198,29 @@ export function EventForm() {
     setIsLoading(true);
 
     try {
-      // Stelle sicher, dass alle Datumswerte gültig sind
       const dataToSend = { ...formData };
 
+      // Datum validieren und formatieren
       if (dataToSend.date) {
-        const date = new Date(dataToSend.date);
+        const date = parseISO(dataToSend.date);
         if (!isNaN(date.getTime())) {
-          dataToSend.date = date.toISOString().split('T')[0];
+          dataToSend.date = format(date, 'yyyy-MM-dd');
         }
       }
 
       if (dataToSend.endDate) {
-        const date = new Date(dataToSend.endDate);
+        const date = parseISO(dataToSend.endDate);
         if (!isNaN(date.getTime())) {
-          dataToSend.endDate = date.toISOString().split('T')[0];
+          dataToSend.endDate = format(date, 'yyyy-MM-dd');
         }
-      } else {
-        // Stelle sicher, dass endDate explizit null ist, wenn kein Datum ausgewählt wurde
-        dataToSend.endDate = null;
+      }
+
+      // Startzeit validieren
+      if (dataToSend.startTime) {
+        const [hours, minutes] = dataToSend.startTime.split(':');
+        if (isNaN(parseInt(hours)) || isNaN(parseInt(minutes))) {
+          dataToSend.startTime = null;
+        }
       }
 
       let result;
@@ -219,14 +250,14 @@ export function EventForm() {
         navigate('/admin/events');
       }
     } catch (error: any) {
-      console.error('Error saving event:', error);
+      console.error('Fehler beim Speichern des Events:', error);
       if (error instanceof Response && error.status === 401) {
         showMessage('Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.', 'error');
         setTimeout(() => {
           navigate('/admin/login');
         }, 2000);
       } else {
-        const errorMessage = (error instanceof Error ? error.message : 'Unknown error saving.');
+        const errorMessage = (error instanceof Error ? error.message : 'Unbekannter Fehler beim Speichern.');
         showMessage(`Fehler beim Speichern des Events: ${errorMessage}`, 'error');
       }
       setIsLoading(false);
