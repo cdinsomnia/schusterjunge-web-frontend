@@ -302,8 +302,8 @@ export function EventForm() {
 
          if (!isNaN(hoursNum) && !isNaN(minutesNum)) {
              // Erzeuge einen ISO 8601 String mit der ausgewählten Zeit und einem festen UTC-Datum (1970-01-01).
-             const referenceDateUTC = new Date(Date.UTC(1970, 0, 1)); // 1970-01-01 00:00:00 UTC
-             const timeInUTC = setHours(setMinutes(referenceDateUTC, minutesNum), hoursNum);
+             // Wichtig: Wir erstellen das Date-Objekt direkt in UTC, um die exakte Zeit zu gewährleisten.
+             const timeInUTC = new Date(Date.UTC(1970, 0, hoursNum, minutesNum, 0, 0));
               // Verwende toISOString(), um den vollständigen Timestamp zu erhalten.
               // Das Backend wird die Zeitkomponente daraus extrahieren.
              dataToSend.startTime = timeInUTC.toISOString();
@@ -389,12 +389,14 @@ export function EventForm() {
     return <div className="text-red-500">Fehler beim Laden des Events: {loadError}</div>;
   }
 
+  // Hilfsfunktion, um deutsche Datums-Strings in Date-Objekte für DatePicker zu konvertieren (lokale Zeit)
   const getDatePickerDateValue = (formDataValue: string | null | undefined): Date | null => {
       if (!formDataValue) return null;
       const parsedDate = parse(formDataValue, 'dd.MM.yyyy', new Date());
       return isValid(parsedDate) ? parsedDate : null;
   };
 
+   // Hilfsfunktion, um deutsche Zeit-Strings in Date-Objekte für DatePicker zu konvertieren (lokale Zeit, nur Zeit relevant)
    const getDatePickerTimeValue = (formDataValue: string | null | undefined): Date | null => {
        if (!formDataValue) return null;
         try {
@@ -403,6 +405,7 @@ export function EventForm() {
             const minutesNum = parseInt(minutes, 10);
             if (!isNaN(hoursNum) && !isNaN(minutesNum)) {
                  const now = new Date();
+                 // Erstelle ein Date Objekt nur mit der Zeit (lokal)
                 return setMinutes(setHours(now, hoursNum), minutesNum);
             }
             return null;
@@ -532,6 +535,7 @@ export function EventForm() {
             </label>
             <div className="relative">
               <DatePicker
+                 // DatePicker value should be a Date object or null (only time is relevant)
                 selected={getDatePickerTimeValue(formData.startTime)}
                 onChange={handleTimeChange}
                 showTimeSelect

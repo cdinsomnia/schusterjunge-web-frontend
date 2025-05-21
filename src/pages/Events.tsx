@@ -5,11 +5,19 @@ import { Event } from '../lib/types';
 import { motion } from 'framer-motion';
 import { FaCalendarAlt, FaMapMarkerAlt, FaBuilding, FaTicketAlt } from 'react-icons/fa';
 import { EventsLoading } from '../components/EventsLoading';
+import { parseISO, format, isValid } from 'date-fns';
 
 type FilterType = 'all' | 'upcoming' | 'past';
 
 function isEventPast(date: string): boolean {
-  return new Date(date) < new Date();
+  const eventDate = parseISO(date);
+  if (!isValid(eventDate)) {
+      console.error('Ungültiges Datum im isEventPast check:', date);
+      return true;
+  }
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return eventDate < today;
 }
 
 export function Events() {
@@ -63,6 +71,22 @@ export function Events() {
       </div>
     );
   }
+
+  const formatStartTimeLocal = (isoString: string | null | undefined): string => {
+       if (!isoString) return '';
+       try {
+            const date = parseISO(isoString);
+            if (isValid(date)) {
+                return format(date, 'HH:mm');
+            } else {
+                console.error('Ungültiger ISO-String für Zeitformatierung:', isoString);
+                 return 'Ungültige Zeit';
+            }
+       } catch (e) {
+            console.error('Fehler bei der Zeitformatierung:', isoString, e);
+            return 'Ungültige Zeit';
+       }
+   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-black/50 to-black py-24 px-4 sm:px-8 relative overflow-hidden">
@@ -152,9 +176,7 @@ export function Events() {
                       </span>
                       {event.startTime && (
                         <span className="text-white/60 text-sm mt-0.5">
-                          {event.startTime.includes('T') 
-                            ? event.startTime.split('T')[1].split(':').slice(0, 2).join(':')
-                            : event.startTime.split(':').slice(0, 2).join(':')} Uhr
+                          {formatStartTimeLocal(event.startTime)} Uhr
                         </span>
                       )}
                     </div>
