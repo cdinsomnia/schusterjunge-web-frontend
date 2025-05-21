@@ -131,7 +131,28 @@ export function Events() {
                 <div className="space-y-2 text-sm text-white/60">
                   <div className="flex items-center space-x-3">
                     <FaCalendarAlt className="text-blue-400/60" />
-                    <span>{new Date(event.date).toLocaleDateString('de-DE')}</span>
+                    <span>
+                      {new Date(event.date).toLocaleDateString('de-DE', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                      })}
+                      {event.endDate && (
+                        <>
+                          {' - '}
+                          {new Date(event.endDate).toLocaleDateString('de-DE', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                          })}
+                        </>
+                      )}
+                      {event.startTime && (
+                        <span className="ml-2">
+                          {event.startTime} Uhr
+                        </span>
+                      )}
+                    </span>
                   </div>
                   {event.venue && (
                     <div className="flex items-center space-x-3">
