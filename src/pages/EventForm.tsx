@@ -113,17 +113,20 @@ export function EventForm() {
         return;
       }
 
+      // Setze die Zeit auf Mitternacht UTC
+      const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+
       if (isEndDate) {
         setSelectedEndDate(date);
         setFormData(prev => ({
           ...prev,
-          endDate: date.toISOString().split('T')[0]
+          endDate: utcDate.toISOString().split('T')[0]
         }));
       } else {
         setSelectedDate(date);
         setFormData(prev => ({
           ...prev,
-          date: date.toISOString().split('T')[0]
+          date: utcDate.toISOString().split('T')[0]
         }));
       }
     } else {
@@ -172,13 +175,30 @@ export function EventForm() {
     setIsLoading(true);
 
     try {
+      // Stelle sicher, dass alle Datumswerte gültig sind
+      const dataToSend = { ...formData };
+      
+      if (dataToSend.date) {
+        const date = new Date(dataToSend.date);
+        if (!isNaN(date.getTime())) {
+          dataToSend.date = date.toISOString().split('T')[0];
+        }
+      }
+      
+      if (dataToSend.endDate) {
+        const date = new Date(dataToSend.endDate);
+        if (!isNaN(date.getTime())) {
+          dataToSend.endDate = date.toISOString().split('T')[0];
+        }
+      }
+
       let result;
       if (isEditMode && id) {
-        result = await updateEvent(id, formData);
+        result = await updateEvent(id, dataToSend);
         showMessage('Event erfolgreich aktualisiert', 'success');
         navigate('/admin/events');
       } else {
-        result = await createEvent(formData);
+        result = await createEvent(dataToSend);
         showMessage('Event erfolgreich erstellt', 'success');
         if (!isEditMode) {
           setFormData({
