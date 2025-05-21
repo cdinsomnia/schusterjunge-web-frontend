@@ -63,16 +63,24 @@ export function EventForm() {
 
           // Setze die Datepicker-Werte
           if (event.date) {
-            setSelectedDate(new Date(event.date));
+            const date = new Date(event.date);
+            if (!isNaN(date.getTime())) {
+              setSelectedDate(date);
+            }
           }
           if (event.endDate) {
-            setSelectedEndDate(new Date(event.endDate));
+            const date = new Date(event.endDate);
+            if (!isNaN(date.getTime())) {
+              setSelectedEndDate(date);
+            }
           }
           if (event.startTime) {
             const [hours, minutes] = event.startTime.split(':');
             const timeDate = new Date();
             timeDate.setHours(parseInt(hours), parseInt(minutes));
-            setSelectedTime(timeDate);
+            if (!isNaN(timeDate.getTime())) {
+              setSelectedTime(timeDate);
+            }
           }
 
           setIsLoading(false);
@@ -107,30 +115,21 @@ export function EventForm() {
   };
 
   const handleDateChange = (date: Date | null, isEndDate: boolean = false) => {
-    if (date) {
-      // Stelle sicher, dass das Datum gültig ist
-      if (isNaN(date.getTime())) {
-        return;
-      }
-
-      // Setze die Zeit auf Mitternacht UTC
-      const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-
+    if (date && !isNaN(date.getTime())) {
       if (isEndDate) {
         setSelectedEndDate(date);
         setFormData(prev => ({
           ...prev,
-          endDate: utcDate.toISOString().split('T')[0]
+          endDate: date.toISOString().split('T')[0]
         }));
       } else {
         setSelectedDate(date);
         setFormData(prev => ({
           ...prev,
-          date: utcDate.toISOString().split('T')[0]
+          date: date.toISOString().split('T')[0]
         }));
       }
     } else {
-      // Wenn das Datum null ist, setze es zurück
       if (isEndDate) {
         setSelectedEndDate(null);
         setFormData(prev => ({
@@ -148,12 +147,7 @@ export function EventForm() {
   };
 
   const handleTimeChange = (time: Date | null) => {
-    if (time) {
-      // Stelle sicher, dass die Zeit gültig ist
-      if (isNaN(time.getTime())) {
-        return;
-      }
-
+    if (time && !isNaN(time.getTime())) {
       setSelectedTime(time);
       const hours = time.getHours().toString().padStart(2, '0');
       const minutes = time.getMinutes().toString().padStart(2, '0');
@@ -304,6 +298,7 @@ export function EventForm() {
                   required
                   className="w-full px-4 py-3 bg-zinc-900/50 border border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
                   placeholderText="TT.MM.JJJJ"
+                  isClearable
                 />
                 <FaCalendarAlt className="absolute right-4 top-1/2 transform -translate-y-1/2 text-zinc-500 pointer-events-none" />
               </div>
@@ -322,6 +317,7 @@ export function EventForm() {
                   minDate={selectedDate || undefined}
                   className="w-full px-4 py-3 bg-zinc-900/50 border border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
                   placeholderText="TT.MM.JJJJ"
+                  isClearable
                 />
                 <FaCalendarAlt className="absolute right-4 top-1/2 transform -translate-y-1/2 text-zinc-500 pointer-events-none" />
               </div>
@@ -344,6 +340,7 @@ export function EventForm() {
                 locale="de"
                 className="w-full px-4 py-3 bg-zinc-900/50 border border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
                 placeholderText="HH:mm"
+                isClearable
               />
               <FaClock className="absolute right-4 top-1/2 transform -translate-y-1/2 text-zinc-500 pointer-events-none" />
             </div>
@@ -405,7 +402,7 @@ export function EventForm() {
 
           <div>
             <label htmlFor="imageUrl" className="block text-sm font-medium mb-2">
-              Bild-URL
+              Bild-URL (optional)
             </label>
             <input
               type="url"
@@ -413,14 +410,13 @@ export function EventForm() {
               name="imageUrl"
               value={formData.imageUrl || ''}
               onChange={handleChange}
-              required
               className="w-full px-4 py-3 bg-zinc-900/50 border border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
             />
           </div>
 
           <div>
             <label htmlFor="ticketUrl" className="block text-sm font-medium mb-2">
-              Ticket-URL
+              Ticket-URL (optional)
             </label>
             <input
               type="url"
