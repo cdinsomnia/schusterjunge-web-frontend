@@ -114,10 +114,10 @@ export function Events() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-white/5 backdrop-blur-xl rounded-xl overflow-hidden border border-white/10 hover:border-blue-500/20 transition-all duration-200 relative group"
+              className="bg-white/5 backdrop-blur-xl rounded-xl overflow-hidden border border-white/10 hover:border-blue-500/20 transition-all duration-200 relative group flex flex-col"
             >
               {event.imageUrl && (
-                <div className="relative h-40 sm:h-48 overflow-hidden">
+                <div className="relative h-48 sm:h-56 overflow-hidden">
                   <img
                     src={event.imageUrl}
                     alt={event.title}
@@ -126,56 +126,63 @@ export function Events() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
               )}
-              <div className="p-4 sm:p-6">
-                <h3 className="text-lg sm:text-xl font-dela text-white mb-2 sm:mb-3 leading-tight">{event.title}</h3>
-                <div className="space-y-2 text-sm text-white/60">
-                  <div className="flex items-center space-x-3">
-                    <FaCalendarAlt className="text-blue-400/60" />
-                    <span>
-                      {new Date(event.date).toLocaleDateString('de-DE', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric'
-                      })}
-                      {event.endDate && (
-                        <>
-                          {' - '}
-                          {new Date(event.endDate).toLocaleDateString('de-DE', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric'
-                          })}
-                        </>
-                      )}
+              <div className="p-5 sm:p-6 flex flex-col flex-grow">
+                <h3 className="text-xl sm:text-2xl font-dela text-white mb-3 sm:mb-4 leading-tight">{event.title}</h3>
+                
+                <div className="space-y-3 text-sm text-white/70">
+                  <div className="flex items-start space-x-3">
+                    <FaCalendarAlt className="text-blue-400/60 mt-1 flex-shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {new Date(event.date).toLocaleDateString('de-DE', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
+                        })}
+                        {event.endDate && (
+                          <>
+                            {' - '}
+                            {new Date(event.endDate).toLocaleDateString('de-DE', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric'
+                            })}
+                          </>
+                        )}
+                      </span>
                       {event.startTime && (
-                        <span className="ml-2">
-                          {event.startTime} Uhr
+                        <span className="text-white/60 text-sm mt-0.5">
+                          {event.startTime.split(':').slice(0, 2).join(':')} Uhr
                         </span>
                       )}
-                    </span>
+                    </div>
                   </div>
+
                   {event.venue && (
-                    <div className="flex items-center space-x-3">
-                      <FaBuilding className="text-blue-400/60" />
+                    <div className="flex items-start space-x-3">
+                      <FaBuilding className="text-blue-400/60 mt-1 flex-shrink-0" />
                       <span>{event.venue}</span>
                     </div>
                   )}
+
                   {event.location && (
-                    <div className="flex items-center space-x-3">
-                      <FaMapMarkerAlt className="text-blue-400/60" />
+                    <div className="flex items-start space-x-3">
+                      <FaMapMarkerAlt className="text-blue-400/60 mt-1 flex-shrink-0" />
                       <span>{event.location}</span>
                     </div>
                   )}
                 </div>
+
                 {event.description && (
-                  <p className="mt-3 sm:mt-4 text-sm text-white/60 line-clamp-3">{event.description}</p>
+                  <p className="mt-4 text-sm text-white/60 line-clamp-2 sm:line-clamp-3">{event.description}</p>
                 )}
+
                 {event.ticketUrl && (
                   <motion.a
                     href={event.ticketUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-4 sm:mt-6 inline-flex items-center space-x-2 bg-white/10 hover:bg-white/20 text-white px-3 sm:px-4 py-2 rounded-lg transition-all duration-200 backdrop-blur-sm text-sm sm:text-base"
+                    className="mt-5 sm:mt-6 inline-flex items-center justify-center space-x-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2.5 rounded-lg transition-all duration-200 backdrop-blur-sm text-sm sm:text-base w-full sm:w-auto"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
