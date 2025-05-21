@@ -112,15 +112,6 @@ export async function getEvent(id: number | string): Promise<Event | null> {
 
         try {
             const event: Event = await authCheckedResponse.json();
-            if (event.date) {
-                event.date = new Date(event.date).toLocaleDateString('de-DE');
-            }
-            if (event.endDate) {
-                event.endDate = new Date(event.endDate).toLocaleDateString('de-DE');
-            }
-            if (event.startTime) {
-                event.startTime = new Date(event.startTime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-            }
             console.log(`Events: Fetched event ${id} successfully.`, event);
             return event;
         } catch (jsonError: any) {
@@ -144,9 +135,9 @@ export async function createEvent(eventData: EventFormData): Promise<Event> {
 
     const dataToSend = {
         ...eventData,
-        date: eventData.date ? new Date(eventData.date.split('.').reverse().join('-')).toISOString() : null,
-        endDate: eventData.endDate ? new Date(eventData.endDate.split('.').reverse().join('-')).toISOString() : null,
-        startTime: eventData.startTime ? new Date(`1970-01-01T${eventData.startTime}`).toISOString() : null
+        date: eventData.date || null,
+        endDate: eventData.endDate || null,
+        startTime: eventData.startTime || null,
     };
 
     const endpoint = `${API_BASE_URL}/events`;
@@ -172,15 +163,6 @@ export async function createEvent(eventData: EventFormData): Promise<Event> {
 
         try {
             const createdEvent: Event = await authCheckedResponse.json();
-            if (createdEvent.date) {
-                createdEvent.date = new Date(createdEvent.date).toLocaleDateString('de-DE');
-            }
-            if (createdEvent.endDate) {
-                createdEvent.endDate = new Date(createdEvent.endDate).toLocaleDateString('de-DE');
-            }
-            if (createdEvent.startTime) {
-                createdEvent.startTime = new Date(createdEvent.startTime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-            }
             console.log('Events: Event created successfully.', createdEvent);
             return createdEvent;
         } catch (jsonError: any) {
@@ -204,9 +186,9 @@ export async function updateEvent(id: number | string, updates: Partial<EventFor
 
     const dataToSend = {
         ...updates,
-        date: updates.date ? new Date(updates.date.split('.').reverse().join('-')).toISOString() : undefined,
-        endDate: updates.endDate ? new Date(updates.endDate.split('.').reverse().join('-')).toISOString() : undefined,
-        startTime: updates.startTime ? new Date(`1970-01-01T${updates.startTime}`).toISOString() : undefined
+        date: updates.date || null,
+        endDate: updates.endDate || null,
+        startTime: updates.startTime || null,
     };
 
     const endpoint = `${API_BASE_URL}/events/${id}`;
@@ -232,15 +214,6 @@ export async function updateEvent(id: number | string, updates: Partial<EventFor
 
         try {
             const updatedEvent: Event = await authCheckedResponse.json();
-            if (updatedEvent.date) {
-                updatedEvent.date = new Date(updatedEvent.date).toLocaleDateString('de-DE');
-            }
-            if (updatedEvent.endDate) {
-                updatedEvent.endDate = new Date(updatedEvent.endDate).toLocaleDateString('de-DE');
-            }
-            if (updatedEvent.startTime) {
-                updatedEvent.startTime = new Date(updatedEvent.startTime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-            }
             console.log(`Events: Event ${id} updated successfully.`, updatedEvent);
             return updatedEvent;
         } catch (jsonError: any) {
