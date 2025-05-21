@@ -4,6 +4,8 @@ export interface Event {
   id: number;
   title: string;
   date: string;
+  endDate: string | null;
+  startTime: string | null;
   description: string | null;
   venue: string | null;
   location: string | null;
@@ -13,10 +15,12 @@ export interface Event {
   updatedAt: string;
 }
 
-export type EventFormData = Omit<Event, 'id' | 'createdAt' | 'updatedAt' | 'description' | 'venue' | 'location' | 'imageUrl' | 'ticketUrl'> & {
+export type EventFormData = Omit<Event, 'id' | 'createdAt' | 'updatedAt' | 'description' | 'venue' | 'location' | 'imageUrl' | 'ticketUrl' | 'endDate' | 'startTime'> & {
   id?: number;
   title: string;
   date: string;
+  endDate?: string | null;
+  startTime?: string | null;
   description?: string | null;
   venue?: string | null;
   location?: string | null;

@@ -1,7 +1,7 @@
 // src/lib/events.ts
 
 import { redirect } from 'react-router-dom';
-import { Event, EventFormData, BackendErrorMessage } from '../lib/types';
+import { Event, EventFormData } from '../lib/types';
 import { getToken } from './auth';
 
 let API_BASE_URL: string | undefined;
@@ -91,6 +91,181 @@ export async function getEvent(id: number | string): Promise<Event | null> {
     try {
         const response = await fetch(endpoint, {
             method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+        });
+
+        const authCheckedResponse = await handleUnauthorized(response);
+
+        if (!authCheckedResponse.ok) {
+            console.error(`Events: Failed to fetch event ${id}`, authCheckedResponse.status, authCheckedResponse.statusText);
+            let errorBody = '';
+            try { errorBody = await authCheckedResponse.text(); } catch(e) {}
+            if (authCheckedResponse.status === 404) {
+                console.log(`Events: Event ${id} not found (404).`);
+                return null;
+            }
+            throw new Error(`Failed to fetch event: ${authCheckedResponse.status} ${authCheckedResponse.statusText} - ${errorBody}`);
+        }
+
+        try {
+            const event: Event = await authCheckedResponse.json();
+            if (event.date) {
+                event.date = new Date(event.date).toLocaleDateString('de-DE');
+            }
+            if (event.endDate) {
+                event.endDate = new Date(event.endDate).toLocaleDateString('de-DE');
+            }
+            if (event.startTime) {
+                event.startTime = new Date(event.startTime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            }
+            console.log(`Events: Fetched event ${id} successfully.`, event);
+            return event;
+        } catch (jsonError: any) {
+            console.error(`Events: Error parsing JSON response for event ${id}:`, jsonError);
+            let responseBody = '';
+            try { responseBody = await authCheckedResponse.text(); } catch(e) {}
+            throw new Error(`Failed to parse event JSON: ${jsonError.message} - Response body: "${responseBody}"`);
+        }
+    } catch (error: any) {
+        console.error(`Events: Catching error in getEvent ${id}:`, error);
+        throw error;
+    }
+}
+
+export async function createEvent(eventData: EventFormData): Promise<Event> {
+    const token = getToken();
+    if (!token) {
+        console.warn('Events: No token, redirecting for createEvent.');
+        throw redirect('/admin/login');
+    }
+
+    const dataToSend = {
+        ...eventData,
+        date: eventData.date ? new Date(eventData.date.split('.').reverse().join('-')).toISOString() : null,
+        endDate: eventData.endDate ? new Date(eventData.endDate.split('.').reverse().join('-')).toISOString() : null,
+        startTime: eventData.startTime ? new Date(`1970-01-01T${eventData.startTime}`).toISOString() : null
+    };
+
+    const endpoint = `${API_BASE_URL}/events`;
+    console.log(`Events: Creating event at ${endpoint}`);
+    try {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(dataToSend),
+        });
+
+        const authCheckedResponse = await handleUnauthorized(response);
+
+        if (!authCheckedResponse.ok) {
+            console.error('Events: Failed to create event', authCheckedResponse.status, authCheckedResponse.statusText);
+            let errorBody = '';
+            try { errorBody = await authCheckedResponse.text(); } catch(e) {}
+            throw new Error(`Failed to create event: ${authCheckedResponse.status} ${authCheckedResponse.statusText} - ${errorBody}`);
+        }
+
+        try {
+            const createdEvent: Event = await authCheckedResponse.json();
+            if (createdEvent.date) {
+                createdEvent.date = new Date(createdEvent.date).toLocaleDateString('de-DE');
+            }
+            if (createdEvent.endDate) {
+                createdEvent.endDate = new Date(createdEvent.endDate).toLocaleDateString('de-DE');
+            }
+            if (createdEvent.startTime) {
+                createdEvent.startTime = new Date(createdEvent.startTime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            }
+            console.log('Events: Event created successfully.', createdEvent);
+            return createdEvent;
+        } catch (jsonError: any) {
+            console.error('Events: Error parsing JSON response for createEvent:', jsonError);
+            let responseBody = '';
+            try { responseBody = await authCheckedResponse.text(); } catch(e) {}
+            throw new Error(`Failed to parse createEvent JSON: ${jsonError.message} - Response body: "${responseBody}"`);
+        }
+    } catch (error: any) {
+        console.error('Events: Catching error in createEvent:', error);
+        throw error;
+    }
+}
+
+export async function updateEvent(id: number | string, updates: Partial<EventFormData>): Promise<Event> {
+    const token = getToken();
+    if (!token) {
+        console.warn('Events: No token, redirecting for updateEvent.');
+        throw redirect('/admin/login');
+    }
+
+    const dataToSend = {
+        ...updates,
+        date: updates.date ? new Date(updates.date.split('.').reverse().join('-')).toISOString() : undefined,
+        endDate: updates.endDate ? new Date(updates.endDate.split('.').reverse().join('-')).toISOString() : undefined,
+        startTime: updates.startTime ? new Date(`1970-01-01T${updates.startTime}`).toISOString() : undefined
+    };
+
+    const endpoint = `${API_BASE_URL}/events/${id}`;
+    console.log(`Events: Updating event ${id} at ${endpoint}`);
+    try {
+        const response = await fetch(endpoint, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(dataToSend),
+        });
+
+        const authCheckedResponse = await handleUnauthorized(response);
+
+        if (!authCheckedResponse.ok) {
+            console.error(`Events: Failed to update event ${id}`, authCheckedResponse.status, authCheckedResponse.statusText);
+            let errorBody = '';
+            try { errorBody = await authCheckedResponse.text(); } catch(e) {}
+            throw new Error(`Failed to update event: ${authCheckedResponse.status} ${authCheckedResponse.statusText} - ${errorBody}`);
+        }
+
+        try {
+            const updatedEvent: Event = await authCheckedResponse.json();
+            if (updatedEvent.date) {
+                updatedEvent.date = new Date(updatedEvent.date).toLocaleDateString('de-DE');
+            }
+            if (updatedEvent.endDate) {
+                updatedEvent.endDate = new Date(updatedEvent.endDate).toLocaleDateString('de-DE');
+            }
+            if (updatedEvent.startTime) {
+                updatedEvent.startTime = new Date(updatedEvent.startTime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            }
+            console.log(`Events: Event ${id} updated successfully.`, updatedEvent);
+            return updatedEvent;
+        } catch (jsonError: any) {
+            console.error(`Events: Error parsing JSON response for updateEvent ${id}:`, jsonError);
+            let responseBody = '';
+            try { responseBody = await authCheckedResponse.text(); } catch(e) {}
+            throw new Error(`Failed to parse updateEvent JSON: ${jsonError.message} - Response body: "${responseBody}"`);
+        }
+    } catch (error: any) {
+        console.error(`Events: Catching error in updateEvent ${id}:`, error);
+        throw error;
+    }
+}
+
+export async function deleteEvent(id: number | string): Promise<{ success: true, status: number }> {
+    const token = getToken();
+    if (!token) {
+        console.warn('Events: No token, redirecting for deleteEvent.');
+        throw redirect('/admin/login');
+    }
+    const endpoint = `${API_BASE_URL}/events/${id}`;
+     console.log(`Events: Deleting event ${id} at ${endpoint}`);
+    try {
+        const response = await fetch(endpoint, {
+            method: 'DELETE',
              headers: {
                  'Authorization': `Bearer ${token}`,
                  'Content-Type': 'application/json'
@@ -99,160 +274,23 @@ export async function getEvent(id: number | string): Promise<Event | null> {
 
         const authCheckedResponse = await handleUnauthorized(response);
 
-         if (!authCheckedResponse.ok) {
-             console.error(`Events: Failed to fetch event ${id}`, authCheckedResponse.status, authCheckedResponse.statusText);
-             let errorBody = '';
-             try { errorBody = await authCheckedResponse.text(); } catch(e) {}
-             if (authCheckedResponse.status === 404) {
-                 console.log(`Events: Event ${id} not found (404).`);
-                 return null;
-             }
-            throw new Error(`Failed to fetch event: ${authCheckedResponse.status} ${authCheckedResponse.statusText} - ${errorBody}`);
+        if (!authCheckedResponse.ok) {
+             console.error(`Events: Failed to delete event ${id}`, authCheckedResponse.status, authCheckedResponse.statusText);
+              let errorBody = '';
+              try { errorBody = await authCheckedResponse.text(); } catch(e) {}
+             throw new Error(`Failed to delete event: ${authCheckedResponse.status} ${authCheckedResponse.statusText} - ${errorBody}`);
         }
 
-        try {
-            const event: Event = await authCheckedResponse.json();
-            console.log(`Events: Fetched event ${id} successfully.`, event);
-            return event;
-        } catch (jsonError: any) {
-             console.error(`Events: Error parsing JSON response for event ${id}:`, jsonError);
-             let responseBody = '';
-             try { responseBody = await authCheckedResponse.text(); } catch(e) {}
-             throw new Error(`Failed to parse event JSON: ${jsonError.message} - Response body: "${responseBody}"`);
+        if (authCheckedResponse.status === 204) {
+             console.log(`Events: Event ${id} deleted (204 No Content).`);
+            return { success: true, status: 204 };
         }
 
+         console.log(`Events: Event ${id} deleted (Status ${authCheckedResponse.status}).`);
+        return { success: true, status: authCheckedResponse.status };
 
     } catch (error: any) {
-         console.error(`Events: Catching error in getEvent ${id}:`, error);
-         throw error;
+         console.error(`Events: Catching error in deleteEvent ${id}:`, error);
+        throw error;
     }
 }
-
-export async function createEvent(eventData: EventFormData): Promise<Event> {
-    const token = getToken();
-     if (!token) {
-         console.warn('Events: No token, redirecting for createEvent.');
-         throw redirect('/admin/login');
-     }
-     const endpoint = `${API_BASE_URL}/events`;
-     console.log(`Events: Creating event at ${endpoint}`);
-     try {
-         const response = await fetch(endpoint, {
-             method: 'POST',
-              headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json'
-              },
-             body: JSON.stringify(eventData),
-         });
-
-         const authCheckedResponse = await handleUnauthorized(response);
-
-         if (!authCheckedResponse.ok) {
-              console.error('Events: Failed to create event', authCheckedResponse.status, authCheckedResponse.statusText);
-              let errorBody = '';
-              try { errorBody = await authCheckedResponse.text(); } catch(e) {}
-             throw new Error(`Failed to create event: ${authCheckedResponse.status} ${authCheckedResponse.statusText} - ${errorBody}`);
-         }
-
-         try {
-             const createdEvent: Event = await authCheckedResponse.json();
-             console.log('Events: Event created successfully.', createdEvent);
-             return createdEvent;
-         } catch (jsonError: any) {
-             console.error('Events: Error parsing JSON response for createEvent:', jsonError);
-             let responseBody = '';
-             try { responseBody = await authCheckedResponse.text(); } catch(e) {}
-             throw new Error(`Failed to parse createEvent JSON: ${jsonError.message} - Response body: "${responseBody}"`);
-         }
-
-
-     } catch (error: any) {
-          console.error('Events: Catching error in createEvent:', error);
-         throw error;
-     }
-}
-
- export async function updateEvent(id: number | string, updates: Partial<EventFormData>): Promise<Event> {
-     const token = getToken();
-     if (!token) {
-         console.warn('Events: No token, redirecting for updateEvent.');
-         throw redirect('/admin/login');
-     }
-     const endpoint = `${API_BASE_URL}/events/${id}`;
-     console.log(`Events: Updating event ${id} at ${endpoint}`);
-     try {
-         const response = await fetch(endpoint, {
-             method: 'PUT',
-              headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json'
-              },
-             body: JSON.stringify(updates),
-         });
-
-         const authCheckedResponse = await handleUnauthorized(response);
-
-         if (!authCheckedResponse.ok) {
-              console.error(`Events: Failed to update event ${id}`, authCheckedResponse.status, authCheckedResponse.statusText);
-              let errorBody = '';
-              try { errorBody = await authCheckedResponse.text(); } catch(e) {}
-             throw new Error(`Failed to update event: ${authCheckedResponse.status} ${authCheckedResponse.statusText} - ${errorBody}`);
-         }
-
-         try {
-             const updatedEvent: Event = await authCheckedResponse.json();
-             console.log(`Events: Event ${id} updated successfully.`, updatedEvent);
-             return updatedEvent;
-         } catch (jsonError: any) {
-             console.error(`Events: Error parsing JSON response for updateEvent ${id}:`, jsonError);
-             let responseBody = '';
-             try { responseBody = await authCheckedResponse.text(); } catch(e) {}
-             throw new Error(`Failed to parse updateEvent JSON: ${jsonError.message} - Response body: "${responseBody}"`);
-         }
-
-     } catch (error: any) {
-          console.error(`Events: Catching error in updateEvent ${id}:`, error);
-         throw error;
-     }
- }
-
- export async function deleteEvent(id: number | string): Promise<{ success: true, status: number }> {
-     const token = getToken();
-     if (!token) {
-         console.warn('Events: No token, redirecting for deleteEvent.');
-         throw redirect('/admin/login');
-     }
-     const endpoint = `${API_BASE_URL}/events/${id}`;
-      console.log(`Events: Deleting event ${id} at ${endpoint}`);
-     try {
-         const response = await fetch(endpoint, {
-             method: 'DELETE',
-              headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json'
-              },
-         });
-
-         const authCheckedResponse = await handleUnauthorized(response);
-
-         if (!authCheckedResponse.ok) {
-              console.error(`Events: Failed to delete event ${id}`, authCheckedResponse.status, authCheckedResponse.statusText);
-               let errorBody = '';
-               try { errorBody = await authCheckedResponse.text(); } catch(e) {}
-              throw new Error(`Failed to delete event: ${authCheckedResponse.status} ${authCheckedResponse.statusText} - ${errorBody}`);
-         }
-
-         if (authCheckedResponse.status === 204) {
-              console.log(`Events: Event ${id} deleted (204 No Content).`);
-             return { success: true, status: 204 };
-         }
-
-          console.log(`Events: Event ${id} deleted (Status ${authCheckedResponse.status}).`);
-         return { success: true, status: authCheckedResponse.status };
-
-     } catch (error: any) {
-          console.error(`Events: Catching error in deleteEvent ${id}:`, error);
-         throw error;
-     }
- }
