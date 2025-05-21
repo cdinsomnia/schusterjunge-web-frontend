@@ -108,17 +108,37 @@ export function EventForm() {
 
   const handleDateChange = (date: Date | null, isEndDate: boolean = false) => {
     if (date) {
+      // Stelle sicher, dass das Datum gültig ist
+      if (isNaN(date.getTime())) {
+        return;
+      }
+
       if (isEndDate) {
         setSelectedEndDate(date);
         setFormData(prev => ({
           ...prev,
-          endDate: date.toISOString()
+          endDate: date.toISOString().split('T')[0]
         }));
       } else {
         setSelectedDate(date);
         setFormData(prev => ({
           ...prev,
-          date: date.toISOString()
+          date: date.toISOString().split('T')[0]
+        }));
+      }
+    } else {
+      // Wenn das Datum null ist, setze es zurück
+      if (isEndDate) {
+        setSelectedEndDate(null);
+        setFormData(prev => ({
+          ...prev,
+          endDate: null
+        }));
+      } else {
+        setSelectedDate(null);
+        setFormData(prev => ({
+          ...prev,
+          date: ''
         }));
       }
     }
@@ -126,12 +146,23 @@ export function EventForm() {
 
   const handleTimeChange = (time: Date | null) => {
     if (time) {
+      // Stelle sicher, dass die Zeit gültig ist
+      if (isNaN(time.getTime())) {
+        return;
+      }
+
       setSelectedTime(time);
       const hours = time.getHours().toString().padStart(2, '0');
       const minutes = time.getMinutes().toString().padStart(2, '0');
       setFormData(prev => ({
         ...prev,
         startTime: `${hours}:${minutes}`
+      }));
+    } else {
+      setSelectedTime(null);
+      setFormData(prev => ({
+        ...prev,
+        startTime: null
       }));
     }
   };
