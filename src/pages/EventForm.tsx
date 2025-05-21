@@ -8,30 +8,26 @@ import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { registerLocale } from 'react-datepicker';
 import { de } from 'date-fns/locale/de';
-import { format, parseISO, setHours, setMinutes, setSeconds, setMilliseconds, isValid, parse } from 'date-fns';
+import { format, parseISO, isValid, parse, startOfDay, setHours, setMinutes } from 'date-fns';
 import { z } from 'zod';
 
 registerLocale('de', de);
 
-// Zod Schema für die Event-Daten, validiert die Frontend-String-Formate
+// Zod Schema für die Event-Daten
 const eventSchema = z.object({
   title: z.string().min(1, "Titel ist erforderlich"),
-  // Datum im Format TT.MM.JJJJ
   date: z.string().min(1, "Startdatum ist erforderlich").refine((val) => {
     const parsedDate = parse(val, 'dd.MM.yyyy', new Date());
     return isValid(parsedDate);
   }, "Ungültiges Startdatum (Format: TT.MM.JJJJ)"),
-  // Enddatum optional im Format TT.MM.JJJJ oder leer
   endDate: z.string().optional().nullable().refine((val) => {
-    if (!val) return true; // Leeres Feld ist erlaubt
+    if (!val) return true;
     const parsedDate = parse(val, 'dd.MM.yyyy', new Date());
     return isValid(parsedDate);
   }, "Ungültiges Enddatum (Format: TT.MM.JJJJ)"),
-  // Startzeit optional im Format HH:mm oder leer
   startTime: z.string().optional().nullable().refine((val) => {
-    if (!val) return true; // Leeres Feld ist erlaubt
+    if (!val) return true;
     const [hours, minutes] = val.split(':');
-    // Einfache Validierung der Zeit-Komponenten
     const hoursNum = parseInt(hours, 10);
     const minutesNum = parseInt(minutes, 10);
     return !isNaN(hoursNum) && !isNaN(minutesNum) && hoursNum >= 0 && hoursNum < 24 && minutesNum >= 0 && minutesNum < 60;
@@ -39,8 +35,8 @@ const eventSchema = z.object({
   description: z.string().optional().nullable(),
   venue: z.string().min(1, "Veranstaltungsort ist erforderlich"),
   location: z.string().min(1, "Adresse ist erforderlich"),
-  imageUrl: z.string().url("Ungültige Bild-URL").optional().nullable().or(z.literal('')), // Leerer String auch erlauben für optional URL
-  ticketUrl: z.string().url("Ungültige Ticket-URL").optional().nullable().or(z.literal('')), // Leerer String auch erlauben für optional URL
+  imageUrl: z.string().url("Ungültige Bild-URL").optional().nullable().or(z.literal('')),
+  ticketUrl: z.string().url("Ungültige Ticket-URL").optional().nullable().or(z.literal('')),
 });
 
 export function EventForm() {
@@ -48,23 +44,20 @@ export function EventForm() {
   const navigate = useNavigate();
   const isEditMode = !!id;
 
-  // Wir speichern die Werte als deutsche Strings, wie im Frontend angezeigt
   const [formData, setFormData] = useState<EventFormData>({
     title: '',
-    date: '', // TT.MM.JJJJ
-    endDate: '', // TT.MM.JJJJ oder leer
-    startTime: '', // HH:mm oder leer
-    description: '', // Textarea gibt leeren String, nicht null
+    date: '',
+    endDate: '',
+    startTime: '',
+    description: '',
     venue: '',
     location: '',
     imageUrl: '',
     ticketUrl: '',
   });
 
-  // Zustände für die DatePicker-Komponenten (Date Objekte - lokale Zeit)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
-  // selectedTime wird als Date-Objekt behandelt, aber nur die Zeit ist relevant für die Anzeige/Auswahl
   const [selectedTime, setSelectedTime] = useState<Date | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -73,7 +66,36 @@ export function EventForm() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [errors, setErrors] = useState<z.ZodIssue[]>([]);
 
-  // Lädt Eventdaten beim Editieren
+  // Helper function to convert backend timestamp to local date/time
+  const parseBackendTimestamp = (timestamp: string | null | undefined) => {
+    if (!timestamp) return null;
+    try {
+      const date = parseISO(timestamp);
+      return isValid(date) ? date : null;
+    } catch (error) {
+      console.error('Error parsing timestamp:', timestamp, error);
+      return null;
+    }
+  };
+
+  // Helper function to create a datetime from date and time in user's timezone
+  const createDateTimeInUserTimezone = (dateStr: string, timeStr?: string) => {
+    const parsedDate = parse(dateStr, 'dd.MM.yyyy', new Date());
+    if (!isValid(parsedDate)) return null;
+
+    if (timeStr) {
+      const [hours, minutes] = timeStr.split(':');
+      const hoursNum = parseInt(hours, 10);
+      const minutesNum = parseInt(minutes, 10);
+      
+      if (!isNaN(hoursNum) && !isNaN(minutesNum)) {
+        return setMinutes(setHours(parsedDate, hoursNum), minutesNum);
+      }
+    }
+    
+    return startOfDay(parsedDate);
+  };
+
   useEffect(() => {
     async function loadEvent() {
       if (!isEditMode || !id) {
@@ -85,74 +107,45 @@ export function EventForm() {
         const event = await getEvent(id);
 
         if (event) {
-          // Parsen und Setzen der Daten und Zeiten vom Backend (ISO 8601) in Frontend-Zustände
-          // Datum
-          if (event.date) {
-            try {
-              const date = parseISO(event.date); // ISO -> Lokales Date Objekt
-              if (isValid(date)) {
-                setSelectedDate(date); // Für DatePicker
-                setFormData(prev => ({ ...prev, date: format(date, 'dd.MM.yyyy') })); // Für Formularfeld (Deutsch)
-              } else {
-                console.error('Ungültiges Startdatum vom Backend:', event.date);
-                setSelectedDate(null);
-                setFormData(prev => ({ ...prev, date: '' }));
-              }
-            } catch (error) {
-              console.error('Fehler beim Parsen des Startdatums vom Backend:', error);
-              setSelectedDate(null);
-              setFormData(prev => ({ ...prev, date: '' }));
-            }
-          } else {
-            setSelectedDate(null);
-            setFormData(prev => ({ ...prev, date: '' }));
+          // Parse dates from backend (they come as ISO strings)
+          const eventDate = parseBackendTimestamp(event.date);
+          const eventEndDate = parseBackendTimestamp(event.endDate);
+          const eventStartTime = parseBackendTimestamp(event.startTime);
+
+          // Set main date
+          if (eventDate) {
+            setSelectedDate(eventDate);
+            setFormData(prev => ({ ...prev, date: format(eventDate, 'dd.MM.yyyy') }));
           }
 
-          // Enddatum
-          if (event.endDate) {
-            try {
-              const endDate = parseISO(event.endDate); // ISO -> Lokales Date Objekt
-               if (isValid(endDate)) {
-                setSelectedEndDate(endDate); // Für DatePicker
-                setFormData(prev => ({ ...prev, endDate: format(endDate, 'dd.MM.yyyy') })); // Für Formularfeld (Deutsch)
-              } else {
-                 console.error('Ungültiges Enddatum vom Backend:', event.endDate);
-                 setSelectedEndDate(null);
-                 setFormData(prev => ({ ...prev, endDate: '' })); // Leerer String, da optional im Backend/Frontend
-              }
-            } catch (error) {
-              console.error('Fehler beim Parsen des Enddatums vom Backend:', error);
-              setSelectedEndDate(null);
-              setFormData(prev => ({ ...prev, endDate: '' }));
-            }
-          } else {
-            setSelectedEndDate(null);
-            setFormData(prev => ({ ...prev, endDate: '' }));
+          // Set end date
+          if (eventEndDate) {
+            setSelectedEndDate(eventEndDate);
+            setFormData(prev => ({ ...prev, endDate: format(eventEndDate, 'dd.MM.yyyy') }));
           }
 
-          // Startzeit
-          if (event.startTime) {
-             try {
-              const startTimeDate = parseISO(event.startTime); // ISO -> Lokales Date Objekt
-              if (isValid(startTimeDate)) {
-                setSelectedTime(startTimeDate); // Für DatePicker (nur Zeit relevant)
-                setFormData(prev => ({ ...prev, startTime: format(startTimeDate, 'HH:mm') })); // Für Formularfeld (Deutsch)
-              } else {
-                 console.error('Ungültige Startzeit vom Backend:', event.startTime);
-                 setSelectedTime(null);
-                 setFormData(prev => ({ ...prev, startTime: '' }));
-              }
-             } catch (error) {
-              console.error('Fehler beim Parsen der Startzeit vom Backend:', error);
-              setSelectedTime(null);
-              setFormData(prev => ({ ...prev, startTime: '' }));
-             }
-          } else {
-             setSelectedTime(null);
-             setFormData(prev => ({ ...prev, startTime: '' }));
+          // Set start time - if we have both date and startTime, combine them properly
+          if (eventDate && eventStartTime) {
+            // Extract time from startTime and apply it to the event date
+            const timeHours = eventStartTime.getHours();
+            const timeMinutes = eventStartTime.getMinutes();
+            const combinedDateTime = setMinutes(setHours(eventDate, timeHours), timeMinutes);
+            
+            setSelectedTime(combinedDateTime);
+            setFormData(prev => ({ 
+              ...prev, 
+              startTime: format(eventStartTime, 'HH:mm') 
+            }));
+          } else if (eventStartTime) {
+            // Fallback: use startTime as-is
+            setSelectedTime(eventStartTime);
+            setFormData(prev => ({ 
+              ...prev, 
+              startTime: format(eventStartTime, 'HH:mm') 
+            }));
           }
 
-          // Restliche Formulardaten setzen
+          // Set other form data
           setFormData(prev => ({
             ...prev,
             title: event.title || '',
@@ -161,211 +154,168 @@ export function EventForm() {
             location: event.location || '',
             imageUrl: event.imageUrl || '',
             ticketUrl: event.ticketUrl || '',
-            // date, endDate, startTime werden separat oben gesetzt
           }));
 
-          setIsLoading(false);
-          setInitialLoading(false);
         } else {
-          console.warn(`Event mit ID ${id} nicht gefunden.`);
+          console.warn(`Event with ID ${id} not found.`);
           navigate('/admin/events');
-          setIsLoading(false);
-          setInitialLoading(false);
         }
       } catch (error: any) {
-        console.error('Fehler beim Laden des Events:', error);
+        console.error('Error loading event:', error);
         if (error instanceof Response && error.status === 401) {
           showMessage('Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.', 'error');
-          setTimeout(() => {
-            navigate('/admin/login');
-          }, 2000);
+          setTimeout(() => navigate('/admin/login'), 2000);
         } else {
           setLoadError('Fehler beim Laden der Eventdaten.');
-          setIsLoading(false);
-          setInitialLoading(false);
         }
+      } finally {
+        setInitialLoading(false);
       }
     }
 
     loadEvent();
   }, [id, isEditMode, navigate]);
 
-  // Handler für allgemeine Textfelder (nicht Datum/Zeit Picker)
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    // Lösche vorherige Validierungsfehler für dieses Feld
+    setFormData(prev => ({ ...prev, [name]: value }));
     setErrors(prevErrors => prevErrors.filter(error => error.path[0] !== name));
   };
 
-  // Handler für Start- und Enddatum DatePicker
   const handleDateChange = (date: Date | null, isEndDate: boolean = false) => {
     if (isEndDate) {
       setSelectedEndDate(date);
-       // Formatiere Date Objekt zu deutschem String für formData
       setFormData(prev => ({
         ...prev,
         endDate: date ? format(date, 'dd.MM.yyyy') : ''
       }));
-       // Lösche Validierungsfehler
-       setErrors(prevErrors => prevErrors.filter(error => error.path[0] !== 'endDate'));
+      setErrors(prevErrors => prevErrors.filter(error => error.path[0] !== 'endDate'));
     } else {
       setSelectedDate(date);
-       // Formatiere Date Objekt zu deutschem String für formData
       setFormData(prev => ({
         ...prev,
         date: date ? format(date, 'dd.MM.yyyy') : ''
       }));
-       // Lösche Validierungsfehler
-       setErrors(prevErrors => prevErrors.filter(error => error.path[0] !== 'date'));
+      setErrors(prevErrors => prevErrors.filter(error => error.path[0] !== 'date'));
+      
+      // If we change the main date and have a time selected, update the time picker's date part
+      if (date && selectedTime) {
+        const newDateTime = setMinutes(
+          setHours(date, selectedTime.getHours()), 
+          selectedTime.getMinutes()
+        );
+        setSelectedTime(newDateTime);
+      }
     }
   };
 
-  // Handler für Startzeit DatePicker
   const handleTimeChange = (time: Date | null) => {
     setSelectedTime(time);
-    // Formatiere Date Objekt zu deutschem Zeit-String für formData
     setFormData(prev => ({
       ...prev,
       startTime: time ? format(time, 'HH:mm') : ''
     }));
-    // Lösche Validierungsfehler
     setErrors(prevErrors => prevErrors.filter(error => error.path[0] !== 'startTime'));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setErrors([]); // Reset errors on new submit attempt
+    setErrors([]);
 
     try {
-      // Daten vor dem Senden validieren (basierend auf deutschen Strings)
       const validationResult = eventSchema.safeParse(formData);
 
       if (!validationResult.success) {
-        // Validierungsfehler anzeigen
-        console.error('Zod Validation Errors:', validationResult.error.errors);
         setErrors(validationResult.error.errors);
         showMessage('Bitte korrigieren Sie die Fehler im Formular.', 'error');
         setIsLoading(false);
-        return; // Stoppe den Submit-Prozess
+        return;
       }
 
-      // Valide Daten extrahieren (immer noch deutsche Strings)
       const validFormData = validationResult.data;
+      const dataToSend: any = { ...validFormData };
 
-      // Konvertiere deutsche Strings in ISO 8601 Timestamps für das Backend
-      const dataToSend: any = {
-        ...validFormData,
-      };
-
-      // Konvertiere Startdatum: TT.MM.JJJJ String zu ISO 8601 (Mitternacht UTC des Tages)
+      // Convert main date
       if (validFormData.date) {
-        const parsedDate = parse(validFormData.date, 'dd.MM.yyyy', new Date());
-        if (isValid(parsedDate)) {
-             // Erzeuge einen ISO 8601 String für das ausgewählte Datum um Mitternacht UTC
-            dataToSend.date = format(parsedDate, 'yyyy-MM-dd') + 'T00:00:00.000Z';
+        const eventDateTime = createDateTimeInUserTimezone(validFormData.date, validFormData.startTime);
+        if (eventDateTime) {
+          // Send the full datetime for the main date field
+          dataToSend.date = eventDateTime.toISOString();
         } else {
-            // Dies sollte durch Zod-Validierung abgefangen werden, ist aber eine zusätzliche Sicherung
-             console.error('Interner Fehler: Ungültiges Startdatum nach Validierung.', validFormData.date);
-             showMessage('Interner Fehler bei der Datumskonvertierung.', 'error');
-             setIsLoading(false);
-             return;
+          // Fallback: just the date at start of day
+          const dateOnly = createDateTimeInUserTimezone(validFormData.date);
+          if (dateOnly) {
+            dataToSend.date = dateOnly.toISOString();
+          }
         }
       }
 
-      // Konvertiere Enddatum: TT.MM.JJJJ String zu ISO 8601 (Mitternacht UTC des Tages), wenn vorhanden
+      // Convert end date
       if (validFormData.endDate) {
-         const parsedEndDate = parse(validFormData.endDate, 'dd.MM.yyyy', new Date());
-         if (isValid(parsedEndDate)) {
-            // Erzeuge einen ISO 8601 String für das ausgewählte Datum um Mitternacht UTC
-            dataToSend.endDate = format(parsedEndDate, 'yyyy-MM-dd') + 'T00:00:00.000Z';
-         } else {
-             // Sollte durch Zod abgefangen werden
-              console.error('Interner Fehler: Ungültiges Enddatum nach Validierung.', validFormData.endDate);
-              showMessage('Interner Fehler bei der Enddatumkonvertierung.', 'error');
-              setIsLoading(false);
-              return;
-         }
+        const endDateTime = createDateTimeInUserTimezone(validFormData.endDate);
+        if (endDateTime) {
+          dataToSend.endDate = endDateTime.toISOString();
+        }
       } else {
-           dataToSend.endDate = null; // Sicherstellen, dass null gesendet wird, wenn Enddatum leer ist
+        dataToSend.endDate = null;
       }
 
-      // Konvertiere Startzeit: HH:mm String zu ISO 8601 (mit beliebigem Datum, z.B. 1970-01-01 UTC)
-      if (validFormData.startTime) {
-         const [hours, minutes] = validFormData.startTime.split(':');
-         const hoursNum = parseInt(hours, 10);
-         const minutesNum = parseInt(minutes, 10);
-
-         if (!isNaN(hoursNum) && !isNaN(minutesNum)) {
-             // Erzeuge einen ISO 8601 String mit der ausgewählten Zeit und einem festen UTC-Datum (1970-01-01).
-             // Wichtig: Wir erstellen das Date-Objekt direkt in UTC, um die exakte Zeit zu gewährleisten.
-             const timeInUTC = new Date(Date.UTC(1970, 0, hoursNum, minutesNum, 0, 0));
-              // Verwende toISOString(), um den vollständigen Timestamp zu erhalten.
-              // Das Backend wird die Zeitkomponente daraus extrahieren.
-             dataToSend.startTime = timeInUTC.toISOString();
-         } else {
-             // Sollte durch Zod abgefangen werden
-              console.error('Interner Fehler: Ungültige Startzeit nach Validierung.', validFormData.startTime);
-              showMessage('Interner Fehler bei der Zeitkonvertierung.', 'error');
-              setIsLoading(false);
-              return;
-         }
+      // Convert start time
+      if (validFormData.startTime && validFormData.date) {
+        const startDateTime = createDateTimeInUserTimezone(validFormData.date, validFormData.startTime);
+        if (startDateTime) {
+          dataToSend.startTime = startDateTime.toISOString();
+        }
       } else {
-          dataToSend.startTime = null; // Sicherstellen, dass null gesendet wird, wenn Startzeit leer ist
+        dataToSend.startTime = null;
       }
 
-       // Leere Strings für optionale URL-Felder in null umwandeln, falls Backend das erwartet
-       if (dataToSend.imageUrl === '') dataToSend.imageUrl = null;
-       if (dataToSend.ticketUrl === '') dataToSend.ticketUrl = null;
+      // Handle empty optional fields
+      if (dataToSend.imageUrl === '') dataToSend.imageUrl = null;
+      if (dataToSend.ticketUrl === '') dataToSend.ticketUrl = null;
 
       let result;
       if (isEditMode && id) {
         console.log('Updating event with data:', dataToSend);
         result = await updateEvent(id, dataToSend);
         showMessage('Event erfolgreich aktualisiert', 'success');
-        // navigate('/admin/events'); // Weiterleitung nach Update
       } else {
         console.log('Creating event with data:', dataToSend);
         result = await createEvent(dataToSend);
         showMessage('Event erfolgreich erstellt', 'success');
-        // Formular zurücksetzen nach erfolgreichem Erstellen, aber nur im Create-Modus
+        
         if (!isEditMode) {
-           setFormData({
-             title: '',
-             date: '',
-             endDate: '',
-             startTime: '',
-             description: '',
-             venue: '',
-             location: '',
-             imageUrl: '',
-             ticketUrl: '',
-           });
-           setSelectedDate(null);
-           setSelectedEndDate(null);
-           setSelectedTime(null);
+          // Reset form
+          setFormData({
+            title: '',
+            date: '',
+            endDate: '',
+            startTime: '',
+            description: '',
+            venue: '',
+            location: '',
+            imageUrl: '',
+            ticketUrl: '',
+          });
+          setSelectedDate(null);
+          setSelectedEndDate(null);
+          setSelectedTime(null);
         }
-        // navigate('/admin/events'); // Weiterleitung nach Erstellen
       }
-       // Weiterleitung nach erfolgreichem Speichern (Update oder Create)
-       navigate('/admin/events');
+      
+      navigate('/admin/events');
 
     } catch (error: any) {
-      console.error('Fehler beim Speichern des Events:', error);
-      // Andere Fehler (Netzwerk, Backend, etc.)
+      console.error('Error saving event:', error);
       if (error instanceof Response && error.status === 401) {
         showMessage('Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.', 'error');
-        setTimeout(() => {
-          navigate('/admin/login');
-        }, 2000);
+        setTimeout(() => navigate('/admin/login'), 2000);
       } else {
-        const errorMessage = (error instanceof Error ? error.message : 'Unbekannter Fehler beim Speichern.');
+        const errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler beim Speichern.';
         showMessage(`Fehler beim Speichern des Events: ${errorMessage}`, 'error');
       }
+    } finally {
       setIsLoading(false);
     }
   };
@@ -375,7 +325,6 @@ export function EventForm() {
     setTimeout(() => setMessage(null), 3000);
   };
 
-  // Funktion zum Anzeigen von Zod-Fehlermeldungen für ein bestimmtes Feld
   const getErrorMessage = (fieldName: string) => {
     const error = errors.find(err => err.path && err.path[0] === fieldName);
     return error ? error.message : null;
@@ -388,33 +337,6 @@ export function EventForm() {
   if (isEditMode && loadError) {
     return <div className="text-red-500">Fehler beim Laden des Events: {loadError}</div>;
   }
-
-  // Hilfsfunktion, um deutsche Datums-Strings in Date-Objekte für DatePicker zu konvertieren (lokale Zeit)
-  const getDatePickerDateValue = (formDataValue: string | null | undefined): Date | null => {
-      if (!formDataValue) return null;
-      const parsedDate = parse(formDataValue, 'dd.MM.yyyy', new Date());
-      return isValid(parsedDate) ? parsedDate : null;
-  };
-
-   // Hilfsfunktion, um deutsche Zeit-Strings in Date-Objekte für DatePicker zu konvertieren (lokale Zeit, nur Zeit relevant)
-   const getDatePickerTimeValue = (formDataValue: string | null | undefined): Date | null => {
-       if (!formDataValue) return null;
-        try {
-            const [hours, minutes] = formDataValue.split(':');
-            const hoursNum = parseInt(hours, 10);
-            const minutesNum = parseInt(minutes, 10);
-            if (!isNaN(hoursNum) && !isNaN(minutesNum)) {
-                 const now = new Date();
-                 // Erstelle ein Date Objekt nur mit der Zeit (lokal)
-                return setMinutes(setHours(now, hoursNum), minutesNum);
-            }
-            return null;
-        } catch (e) {
-            console.error('Fehler beim Parsen des Zeit-Strings für DatePicker:', formDataValue, e);
-            return null;
-        }
-    };
-
 
   return (
     <div className="min-h-screen bg-black text-white p-8">
@@ -449,7 +371,6 @@ export function EventForm() {
             <p className="font-bold">Validierungsfehler:</p>
             <ul className="mt-2 list-disc list-inside">
               {errors.map((error, index) => (
-                // Sicherstellen, dass error.path existiert und nicht leer ist
                 <li key={index}>{`${error.path && error.path.length > 0 ? error.path.join('.') + ': ' : ''}${error.message}`}</li>
               ))}
             </ul>
@@ -488,8 +409,7 @@ export function EventForm() {
               </label>
               <div className="relative">
                 <DatePicker
-                  // DatePicker value should be a Date object or null
-                  selected={getDatePickerDateValue(formData.date)}
+                  selected={selectedDate}
                   onChange={(date) => handleDateChange(date)}
                   dateFormat="dd.MM.yyyy"
                   locale="de"
@@ -511,12 +431,11 @@ export function EventForm() {
               </label>
               <div className="relative">
                 <DatePicker
-                  // DatePicker value should be a Date object or null
-                  selected={getDatePickerDateValue(formData.endDate)}
+                  selected={selectedEndDate}
                   onChange={(date) => handleDateChange(date, true)}
                   dateFormat="dd.MM.yyyy"
                   locale="de"
-                  minDate={getDatePickerDateValue(formData.date) || undefined}
+                  minDate={selectedDate || undefined}
                   className={`w-full px-4 py-3 bg-zinc-900/50 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200
                      ${getErrorMessage('endDate') ? 'border-red-500 focus:ring-red-500/50' : 'border-zinc-800 focus:ring-blue-500/50 focus:border-transparent'}
                   `}
@@ -535,8 +454,7 @@ export function EventForm() {
             </label>
             <div className="relative">
               <DatePicker
-                 // DatePicker value should be a Date object or null (only time is relevant)
-                selected={getDatePickerTimeValue(formData.startTime)}
+                selected={selectedTime}
                 onChange={handleTimeChange}
                 showTimeSelect
                 showTimeSelectOnly
@@ -607,7 +525,6 @@ export function EventForm() {
                 name="description"
                 value={formData.description || ''}
                 onChange={handleChange}
-                required
                 rows={4}
                  className={`w-full px-4 py-3 bg-zinc-900/50 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200
                      ${getErrorMessage('description') ? 'border-red-500 focus:ring-red-500/50' : 'border-zinc-800 focus:ring-blue-500/50 focus:border-transparent'}
