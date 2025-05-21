@@ -186,6 +186,9 @@ export function EventForm() {
         if (!isNaN(date.getTime())) {
           dataToSend.endDate = date.toISOString().split('T')[0];
         }
+      } else {
+        // Stelle sicher, dass endDate explizit null ist, wenn kein Datum ausgewählt wurde
+        dataToSend.endDate = null;
       }
 
       let result;
@@ -216,13 +219,16 @@ export function EventForm() {
       }
     } catch (error: any) {
       console.error('Error saving event:', error);
-      if (error instanceof Response && error.status === 302) {
-        navigate('/admin/login');
+      if (error instanceof Response && error.status === 401) {
+        showMessage('Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.', 'error');
+        setTimeout(() => {
+          navigate('/admin/login');
+        }, 2000);
       } else {
         const errorMessage = (error instanceof Error ? error.message : 'Unknown error saving.');
         showMessage(`Fehler beim Speichern des Events: ${errorMessage}`, 'error');
-        setIsLoading(false);
       }
+      setIsLoading(false);
     }
   };
 
