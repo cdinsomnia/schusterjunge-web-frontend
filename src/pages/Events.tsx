@@ -152,7 +152,9 @@ export function Events() {
                       </span>
                       {event.startTime && (
                         <span className="text-white/60 text-sm mt-0.5">
-                          {event.startTime.split(':').slice(0, 2).join(':')} Uhr
+                          {event.startTime.includes('T') 
+                            ? event.startTime.split('T')[1].split(':').slice(0, 2).join(':')
+                            : event.startTime.split(':').slice(0, 2).join(':')} Uhr
                         </span>
                       )}
                     </div>

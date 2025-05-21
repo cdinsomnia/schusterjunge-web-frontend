@@ -75,7 +75,9 @@ export function EventForm() {
             }
           }
           if (event.startTime) {
-            const [hours, minutes] = event.startTime.split(':');
+            const [hours, minutes] = event.startTime.includes('T')
+              ? event.startTime.split('T')[1].split(':')
+              : event.startTime.split(':');
             const timeDate = new Date();
             timeDate.setHours(parseInt(hours), parseInt(minutes));
             if (!isNaN(timeDate.getTime())) {
