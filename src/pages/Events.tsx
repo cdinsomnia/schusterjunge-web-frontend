@@ -80,7 +80,7 @@ export function Events() {
             Veranstaltungen
           </h1>
           <p className="text-sm sm:text-base text-white/80 max-w-2xl mx-auto px-4">
-            Entdecke unsere kommenden Shows und Events. Wir freuen uns darauf, dich live zu sehen!
+            Auf folgenden Veranstaltungen bin ich vertreten. Erhalte Informationen zu den Veranstaltungen und kaufe Tickets, wenn verfügbar, falls du den Präsidenten mal Live erleben willst.
           </p>
         </motion.div>
 

@@ -48,20 +48,6 @@ export function EventForm() {
         const event = await getEvent(id);
 
         if (event) {
-          setFormData(prev => ({
-            ...prev,
-            title: event.title,
-            date: event.date,
-            endDate: event.endDate,
-            startTime: event.startTime,
-            description: event.description,
-            venue: event.venue,
-            location: event.location,
-            imageUrl: event.imageUrl,
-            ticketUrl: event.ticketUrl,
-          }));
-
-          // Setze die Datepicker-Werte
           if (event.date) {
             const date = new Date(event.date);
             if (!isNaN(date.getTime())) {
@@ -85,6 +71,18 @@ export function EventForm() {
             }
           }
 
+          setFormData({
+            title: event.title,
+            date: event.date,
+            endDate: event.endDate,
+            startTime: event.startTime,
+            description: event.description,
+            venue: event.venue,
+            location: event.location,
+            imageUrl: event.imageUrl,
+            ticketUrl: event.ticketUrl,
+          });
+
           setIsLoading(false);
           setInitialLoading(false);
         } else {
@@ -95,8 +93,11 @@ export function EventForm() {
         }
       } catch (error: any) {
         console.error('Error loading event for edit:', error);
-        if (error instanceof Response && error.status === 302) {
-          navigate('/admin/login');
+        if (error instanceof Response && error.status === 401) {
+          showMessage('Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.', 'error');
+          setTimeout(() => {
+            navigate('/admin/login');
+          }, 2000);
         } else {
           setLoadError('Error loading event data.');
           setIsLoading(false);
@@ -173,14 +174,14 @@ export function EventForm() {
     try {
       // Stelle sicher, dass alle Datumswerte gültig sind
       const dataToSend = { ...formData };
-      
+
       if (dataToSend.date) {
         const date = new Date(dataToSend.date);
         if (!isNaN(date.getTime())) {
           dataToSend.date = date.toISOString().split('T')[0];
         }
       }
-      
+
       if (dataToSend.endDate) {
         const date = new Date(dataToSend.endDate);
         if (!isNaN(date.getTime())) {
@@ -201,14 +202,14 @@ export function EventForm() {
         showMessage('Event erfolgreich erstellt', 'success');
         if (!isEditMode) {
           setFormData({
-            title: '', 
-            date: '', 
+            title: '',
+            date: '',
             endDate: null,
             startTime: null,
-            description: null, 
-            venue: null, 
-            location: null, 
-            imageUrl: null, 
+            description: null,
+            venue: null,
+            location: null,
+            imageUrl: null,
             ticketUrl: null
           });
           setSelectedDate(null);
@@ -248,7 +249,7 @@ export function EventForm() {
   return (
     <div className="min-h-screen bg-black text-white p-8">
       <div className="max-w-2xl mx-auto">
-        <motion.h1 
+        <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-3xl font-bold mb-8"
@@ -260,11 +261,10 @@ export function EventForm() {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`${
-              message.type === 'success' 
-                ? 'bg-green-600/20 border-green-600/40 text-green-400' 
+            className={`${message.type === 'success'
+                ? 'bg-green-600/20 border-green-600/40 text-green-400'
                 : 'bg-red-600/20 border-red-600/40 text-red-400'
-            } p-4 rounded-lg mb-6 border`}
+              } p-4 rounded-lg mb-6 border`}
           >
             {message.text}
           </motion.div>
